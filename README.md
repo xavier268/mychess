@@ -1,9 +1,7 @@
 # mychess
 experimental chess engine in go
 
-## missing in basic piece moves
-
-* generate castling legal moves  ?
+All moves are normally implemented ?
 
 ## missing in game play
 
