@@ -18,223 +18,223 @@ func (pos *Position) LegalMoves(moves []Move) []Move {
 			if pos.Turn*piece <= 0 {
 				continue // skip if piece is empty or not your own !
 			}
+			sq := Square{i, j}
 			switch piece {
 			case PAWN, -PAWN:
-				moves = pawnMoves(pos, i, j, moves)
+				moves = pawnMoves(pos, sq, moves)
 			case KNIGHT, -KNIGHT:
-				moves = knightMoves(pos, i, j, moves)
+				moves = knightMoves(pos, sq, moves)
 			case BISHOP, -BISHOP:
-				moves = bishopMoves(pos, i, j, moves)
+				moves = bishopMoves(pos, sq, moves)
 			case ROOK, -ROOK:
-				moves = rookMoves(pos, i, j, moves)
+				moves = rookMoves(pos, sq, moves)
 			case QUEEN, -QUEEN:
-				moves = queenMoves(pos, i, j, moves)
+				moves = queenMoves(pos, sq, moves)
 			case KING, -KING:
-				moves = kingMoves(pos, i, j, moves)
+				moves = kingMoves(pos, sq, moves)
 			}
 		}
 	}
 	return moves
 }
 
-func rookMoves(pos *Position, i, j int, moves []Move) []Move {
+func rookMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	piece := pos.Board[i][j]
-	from := Square{i, j}
 	var m Move
 	var k int
 	for k = i + 1; k < 8 && pos.Board[k][j] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{k, j}}
+		m = Move{Piece: piece, From: sq, To: Square{k, j}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if k < 8 && pos.Turn*pos.Board[k][j] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{k, j}}
+		m = Move{Piece: piece, From: sq, To: Square{k, j}}
 		moves = append(moves, m)
 	}
 
 	for k = i - 1; k >= 0 && pos.Board[k][j] == EMPTY; k-- {
-		m = Move{Piece: piece, From: from, To: Square{k, j}}
+		m = Move{Piece: piece, From: sq, To: Square{k, j}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if k >= 0 && pos.Turn*pos.Board[k][j] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{k, j}}
+		m = Move{Piece: piece, From: sq, To: Square{k, j}}
 		moves = append(moves, m)
 	}
 
 	for k = j + 1; k < 8 && pos.Board[i][k] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{i, k}}
+		m = Move{Piece: piece, From: sq, To: Square{i, k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if k < 8 && pos.Turn*pos.Board[i][k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i, k}}
+		m = Move{Piece: piece, From: sq, To: Square{i, k}}
 		moves = append(moves, m)
 	}
 
 	for k = j - 1; k >= 0 && pos.Board[i][k] == EMPTY; k-- {
-		m = Move{Piece: piece, From: from, To: Square{i, k}}
+		m = Move{Piece: piece, From: sq, To: Square{i, k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if k >= 0 && pos.Turn*pos.Board[i][k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i, k}}
+		m = Move{Piece: piece, From: sq, To: Square{i, k}}
 		moves = append(moves, m)
 	}
 	return moves
 }
 
-func bishopMoves(pos *Position, i, j int, moves []Move) []Move {
+func bishopMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	piece := pos.Board[i][j]
-	from := Square{i, j}
 	var m Move
 	var k int
 	// up right
 	for k = 1; i+k < 8 && j+k < 8 && pos.Board[i+k][j+k] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{i + k, j + k}}
+		m = Move{Piece: piece, From: sq, To: Square{i + k, j + k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if i+k < 8 && j+k < 8 && pos.Turn*pos.Board[i+k][j+k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i + k, j + k}}
+		m = Move{Piece: piece, From: sq, To: Square{i + k, j + k}}
 		moves = append(moves, m)
 	}
 	for k = 1; i-k >= 0 && j+k < 8 && pos.Board[i-k][j+k] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{i - k, j + k}}
+		m = Move{Piece: piece, From: sq, To: Square{i - k, j + k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if i-k >= 0 && j+k < 8 && pos.Turn*pos.Board[i-k][j+k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i - k, j + k}}
+		m = Move{Piece: piece, From: sq, To: Square{i - k, j + k}}
 		moves = append(moves, m)
 	}
 	// down right
 	for k = 1; i+k < 8 && j-k >= 0 && pos.Board[i+k][j-k] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{i + k, j - k}}
+		m = Move{Piece: piece, From: sq, To: Square{i + k, j - k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if i+k < 8 && j-k >= 0 && pos.Turn*pos.Board[i+k][j-k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i + k, j - k}}
+		m = Move{Piece: piece, From: sq, To: Square{i + k, j - k}}
 		moves = append(moves, m)
 	}
 	// down left
 	for k = 1; i-k >= 0 && j-k >= 0 && pos.Board[i-k][j-k] == EMPTY; k++ {
-		m = Move{Piece: piece, From: from, To: Square{i - k, j - k}}
+		m = Move{Piece: piece, From: sq, To: Square{i - k, j - k}}
 		moves = append(moves, m)
 	}
 	// check if we can capture ?
 	if i-k >= 0 && j-k >= 0 && pos.Turn*pos.Board[i-k][j-k] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i - k, j - k}}
+		m = Move{Piece: piece, From: sq, To: Square{i - k, j - k}}
 		moves = append(moves, m)
 	}
 	return moves
 }
 
-func queenMoves(pos *Position, i, j int, moves []Move) []Move {
-	mv := rookMoves(pos, i, j, moves)
-	return bishopMoves(pos, i, j, mv)
+func queenMoves(pos *Position, sq Square, moves []Move) []Move {
+	mv := rookMoves(pos, sq, moves)
+	return bishopMoves(pos, sq, mv)
 }
 
-func kingMoves(pos *Position, i, j int, moves []Move) []Move {
-
+func kingMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	piece := pos.Board[i][j]
-	from := Square{i, j}
 	var m Move
 	// up
 	if i+1 < 8 && (pos.Board[i+1][j] == EMPTY || pos.Turn*pos.Board[i+1][j] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j}}
 		moves = append(moves, m)
 	}
 	// up right
 	if i+1 < 8 && j+1 < 8 && (pos.Board[i+1][j+1] == EMPTY || pos.Turn*pos.Board[i+1][j+1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j + 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j + 1}}
 		moves = append(moves, m)
 
 	}
 	// right
 	if j+1 < 8 && (pos.Board[i][j+1] == EMPTY || pos.Turn*pos.Board[i][j+1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i, j + 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i, j + 1}}
 		moves = append(moves, m)
 
 	}
 	// down right
 	if i-1 >= 0 && j+1 < 8 && (pos.Board[i-1][j+1] == EMPTY || pos.Turn*pos.Board[i-1][j+1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j + 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j + 1}}
 		moves = append(moves, m)
 
 	}
 	// down
 	if i-1 >= 0 && (pos.Board[i-1][j] == EMPTY || pos.Turn*pos.Board[i-1][j] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j}}
 		moves = append(moves, m)
 
 	}
 	// down left
 	if i-1 >= 0 && j-1 >= 0 && (pos.Board[i-1][j-1] == EMPTY || pos.Turn*pos.Board[i-1][j-1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j - 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j - 1}}
 		moves = append(moves, m)
 
 	}
 	// left
 	if j-1 >= 0 && (pos.Board[i][j-1] == EMPTY || pos.Turn*pos.Board[i][j-1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i, j - 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i, j - 1}}
 		moves = append(moves, m)
 
 	}
 	// up left
 	if i+1 < 8 && j-1 >= 0 && (pos.Board[i+1][j-1] == EMPTY || pos.Turn*pos.Board[i+1][j-1] < 0) {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j - 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j - 1}}
 		moves = append(moves, m)
 	}
 	return moves
 }
 
-func knightMoves(pos *Position, i, j int, moves []Move) []Move {
+func knightMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	di := []int{2, 1, -1, -2, -2, -1, 1, 2}
 	dj := []int{1, 2, 2, 1, -1, -2, -2, -1}
 
 	piece := pos.Board[i][j]
-	from := Square{i, j}
 	var m Move
 	for k := 0; k < 8; k++ {
 		ii := i + di[k]
 		jj := j + dj[k]
 		if ii >= 0 && ii < 8 && jj >= 0 && jj < 8 && (pos.Board[ii][jj] == EMPTY || pos.Turn*pos.Board[ii][jj] < 0) {
-			m = Move{Piece: piece, From: from, To: Square{ii, jj}}
+			m = Move{Piece: piece, From: sq, To: Square{ii, jj}}
 			moves = append(moves, m)
 		}
 	}
 	return moves
 }
 
-func pawnMoves(pos *Position, i, j int, moves []Move) []Move {
+func pawnMoves(pos *Position, sq Square, moves []Move) []Move {
 	if pos.Turn == WHITE {
-		return whitePawnMoves(pos, i, j, moves)
+		return whitePawnMoves(pos, sq, moves)
 	} else {
-		return blackPawnMoves(pos, i, j, moves)
+		return blackPawnMoves(pos, sq, moves)
 	}
 }
 
-func whitePawnMoves(pos *Position, i, j int, moves []Move) []Move {
+func whitePawnMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	piece := pos.Board[i][j]
-	from := Square{i, j}
 	var m Move
 
 	// move one square up
 	if i+1 < 8 && pos.Board[i+1][j] == EMPTY {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
 	// ove two square up
 	if i == 1 && pos.Board[i+1][j] == EMPTY && pos.Board[i+2][j] == EMPTY {
-		m = Move{Piece: piece, From: from, To: Square{i + 2, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 2, j}}
 		moves = append(moves, m)
 	}
 	// capture left, including en passant
 	if i+1 < 8 && j-1 >= 0 && (pos.Board[i+1][j-1] < 0 || pos.EnPassant == Square{i + 1, j - 1}) {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j - 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j - 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
@@ -276,30 +276,31 @@ func promoteLastMove(turn int8, moves []Move) []Move {
 	return moves
 }
 
-func blackPawnMoves(pos *Position, i, j int, moves []Move) []Move {
+func blackPawnMoves(pos *Position, sq Square, moves []Move) []Move {
+	i, j := sq.Row, sq.Col
 	// move one square down
 	piece := pos.Board[i][j]
-	from := Square{i, j}
+
 	var m Move
 	if i-1 >= 0 && pos.Board[i-1][j] == EMPTY {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
 	// ove two square down
 	if i == 6 && pos.Board[i-1][j] == EMPTY && pos.Board[i-2][j] == EMPTY {
-		m = Move{Piece: piece, From: from, To: Square{i - 2, j}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 2, j}}
 		moves = append(moves, m)
 	}
 	// capture left, including en passant
 	if i-1 >= 0 && j-1 >= 0 && (pos.Board[i-1][j-1] > 0 || pos.EnPassant == Square{i - 1, j - 1}) {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j - 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j - 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
 	// capture right, including en passant
 	if i-1 >= 0 && j+1 < 8 && (pos.Board[i-1][j+1] > 0 || pos.EnPassant == Square{i - 1, j + 1}) {
-		m = Move{Piece: piece, From: from, To: Square{i - 1, j + 1}}
+		m = Move{Piece: piece, From: sq, To: Square{i - 1, j + 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
