@@ -77,6 +77,35 @@ func TestEnPassant2(t *testing.T) {
 	}
 }
 
+func TestCastling3(t *testing.T) {
+	p := tp3()
+	fmt.Println("Test position #3, before castling\n", p.String())
+	p.PrintLegalMoves()
+
+	m := Move{Piece: KING, From: SquareFromString("e1"), To: SquareFromString("g1")}
+	p.ExecuteMove(m)
+	fmt.Println("Test position #3, after white castling\n", p.String())
+	p.PrintLegalMoves()
+
+	if p.Board[0][6] != KING {
+		t.Errorf("Expected white king at g1")
+	}
+	if p.Board[0][5] != ROOK {
+		t.Errorf("Expected white rook at f1")
+	}
+	m = Move{Piece: -KING, From: SquareFromString("e8"), To: SquareFromString("c8")}
+	p.ExecuteMove(m)
+	fmt.Println("Test position #3, after black castling\n", p.String())
+	p.PrintLegalMoves()
+
+	if p.Board[7][2] != -KING {
+		t.Errorf("Expected black king at c8")
+	}
+	if p.Board[7][3] != -ROOK {
+		t.Errorf("Expected black rook at d8")
+	}
+}
+
 func TestDisplayPositions(t *testing.T) {
 	p := NewPosition()
 	fmt.Println("Empty position\n", p.String())
@@ -85,7 +114,9 @@ func TestDisplayPositions(t *testing.T) {
 	p = tp1()
 	fmt.Println("Test position #1\n", p.String())
 	p = tp2()
-	fmt.Println("Test position #2\n", p.String())
+	fmt.Println("Test position #2-en passant\n", p.String())
+	p = tp3()
+	fmt.Println("Test position #3-castling\n", p.String())
 }
 
 // Test position 1
@@ -119,6 +150,20 @@ func tp2() *Position {
 	p.SetPiece(-PAWN, "a4", "c4")
 
 	p.SetPiece(-ROOK, "e3")
+
+	return p
+}
+
+// Test position #3 : castling
+func tp3() *Position {
+
+	p := NewPosition()
+
+	p.SetPiece(KING, "e1")
+	p.SetPiece(-KING, "e8")
+
+	p.SetPiece(ROOK, "a1", "h1")
+	p.SetPiece(-ROOK, "a8", "h8")
 
 	return p
 }

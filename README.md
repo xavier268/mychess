@@ -3,7 +3,7 @@ experimental chess engine in go
 
 ## missing in basic piece moves
 
-* castling ?
+* generate castling legal moves  ?
 
 ## missing in game play
 

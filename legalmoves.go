@@ -1,11 +1,11 @@
 package mychess
 
+import "fmt"
+
 // Generate all legal moves from position. A move slice is provided, avoiding allocation as much as possible.
 // If it is nil, a new slice will be allocated.
 func (pos *Position) LegalMoves(moves []Move) []Move {
-	// if pos.Draw || pos.StaleMate {
-	// 	return nil
-	// }
+
 	if moves == nil {
 		moves = make([]Move, 0, 40)
 	} else {
@@ -187,6 +187,9 @@ func kingMoves(pos *Position, sq Square, moves []Move) []Move {
 		m = Move{Piece: piece, From: sq, To: Square{i + 1, j - 1}}
 		moves = append(moves, m)
 	}
+	// castle
+	moves = castleMoves(pos, sq, moves)
+
 	return moves
 }
 
@@ -307,164 +310,182 @@ func blackPawnMoves(pos *Position, sq Square, moves []Move) []Move {
 	return moves
 }
 
-// Check if provided square is exposed by "who" player. Who is white or black.
-// CHECK LOGIC AND TESTING NEEDED !!
-/*
-func (pos *Position) isExposedBy(sq Square, who int8) bool {
-	 	// look up
-	   	for i := sq.Row + 1; i < 8; i++ {
-	   		piece := pos.Board[i][sq.Col]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == ROOK || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look down
-	   	for i := sq.Row - 1; i >= 0; i-- {
-	   		piece := pos.Board[i][sq.Col]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == ROOK || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look right
-	   	for j := sq.Col + 1; j < 8; j++ {
-	   		piece := pos.Board[sq.Row][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == ROOK || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look left
-	   	for j := sq.Col - 1; j >= 0; j-- {
-	   		piece := pos.Board[sq.Row][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == ROOK || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look up right
-	   	for i, j := sq.Row+1, sq.Col+1; i < 8 && j < 8; i, j = i+1, j+1 {
-	   		piece := pos.Board[i][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == BISHOP || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look down right
-	   	for i, j := sq.Row-1, sq.Col+1; i >= 0 && j < 8; i, j = i-1, j+1 {
-	   		piece := pos.Board[i][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == BISHOP || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look down left
-	   	for i, j := sq.Row-1, sq.Col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
-	   		piece := pos.Board[i][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == BISHOP || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look up left
-	   	for i, j := sq.Row+1, sq.Col-1; i < 8 && j >= 0; i, j = i+1, j-1 {
-	   		piece := pos.Board[i][j]
-	   		if piece == EMPTY {
-	   			continue
-	   		}
-	   		if piece*who == BISHOP || piece*who == QUEEN {
-	   			return true
-	   		}
-	   		break
-	   	}
-	   	// look up knight
-	   	if sq.Row+2 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+2][sq.Col+1] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row+1 < 8 && sq.Col+2 < 8 && pos.Board[sq.Row+1][sq.Col+2] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row-1 >= 0 && sq.Col+2 < 8 && pos.Board[sq.Row-1][sq.Col+2] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row-2 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-2][sq.Col+1] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row-2 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-2][sq.Col-1] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row-1 >= 0 && sq.Col-2 >= 0 && pos.Board[sq.Row-1][sq.Col-2] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row+1 < 8 && sq.Col-2 >= 0 && pos.Board[sq.Row+1][sq.Col-2] == who*KNIGHT {
-	   		return true
-	   	}
-	   	if sq.Row+2 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+2][sq.Col-1] == who*KNIGHT {
-	   		return true
-	   	}
+// verify king starting position and color, and no currently under check
+func castleMoves(pos *Position, sq Square, moves []Move) []Move {
+	if sq.Col != 4 { // should start from "e" column
+		return moves
+	}
+	if pos.Turn == WHITE && sq.Row == 0 && !pos.isAttacked(Square{0, 4}, BLACK) {
+		return whiteCastleMoves(pos, sq, moves)
+	}
+	if pos.Turn == BLACK && sq.Row == 7 && !pos.isAttacked(Square{7, 4}, WHITE) {
+		return blackCastleMoves(pos, sq, moves)
+	}
+	return moves
+}
 
-	   	// Look for king
-	   	if sq.Row+1 < 8 && pos.Board[sq.Row+1][sq.Col] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Row-1 >= 0 && pos.Board[sq.Row-1][sq.Col] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Col+1 < 8 && pos.Board[sq.Row][sq.Col+1] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Col-1 >= 0 && pos.Board[sq.Row][sq.Col-1] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*KING {
-	   		return true
-	   	}
-	   	if sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*KING {
-	   		return true
-	   	}
+// king is already in required position
+func whiteCastleMoves(pos *Position, sq Square, moves []Move) []Move {
+	// check queen side
+	if pos.CanWhiteCastleQueenSide && pos.Board[0][1] == EMPTY && pos.Board[0][2] == EMPTY && pos.Board[0][3] == EMPTY {
+		if !pos.isAttacked(Square{0, 2}, BLACK) && !pos.isAttacked(Square{0, 3}, BLACK) {
+			moves = append(moves, Move{Piece: KING, From: sq, To: Square{0, 2}})
+		}
+	}
+	// check king side
+	if pos.CanWhiteCastleKingSide && pos.Board[0][5] == EMPTY && pos.Board[0][6] == EMPTY {
+		if !pos.isAttacked(Square{0, 5}, BLACK) && !pos.isAttacked(Square{0, 6}, BLACK) {
+			moves = append(moves, Move{Piece: KING, From: sq, To: Square{0, 6}})
+		}
+	}
+	return moves
+}
 
-	   	// Look for pawn
-	   	if who == WHITE && sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*PAWN {
-	   		return true
-	   	}
-	   	if who == WHITE && sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*PAWN {
-	   		return true
-	   	}
-	   	if who == BLACK && sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*PAWN {
-	   		return true
-	   	}
-	   	if who == BLACK && sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*PAWN {
-	   		return true
-	   	}
+func blackCastleMoves(pos *Position, sq Square, moves []Move) []Move {
+	// check queen side
+	if pos.CanBlackCastleQueenSide && pos.Board[7][1] == EMPTY && pos.Board[7][2] == EMPTY && pos.Board[7][3] == EMPTY {
+		if !pos.isAttacked(Square{7, 2}, WHITE) && !pos.isAttacked(Square{7, 3}, WHITE) {
+			moves = append(moves, Move{Piece: -KING, From: sq, To: Square{7, 2}})
+		}
+	}
+	// check king side
+	if pos.CanBlackCastleKingSide && pos.Board[7][5] == EMPTY && pos.Board[7][6] == EMPTY {
+		if !pos.isAttacked(Square{7, 5}, WHITE) && !pos.isAttacked(Square{7, 6}, WHITE) {
+			moves = append(moves, Move{Piece: -KING, From: sq, To: Square{7, 6}})
+		}
+	}
+	return moves
+}
+
+// Tell if a position is under attack by the specified color ?
+// Position is unchanged. Color may differ from current Turn.
+func (p *Position) isAttacked(sq Square, by int8) bool {
+
+	// check verticals (rook & queen)
+	for i := sq.Row + 1; i < 8; i++ {
+		piece := p.Board[i][sq.Col]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == ROOK || piece*by == QUEEN {
+			return true
+		}
+	}
+	for i := sq.Row - 1; i >= 0; i-- {
+		piece := p.Board[i][sq.Col]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == ROOK || piece*by == QUEEN {
+			return true
+		}
+	}
+
+	// check horizontals (rook & queen)
+	for j := sq.Col + 1; j < 8; j++ {
+		piece := p.Board[sq.Row][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == ROOK || piece*by == QUEEN {
+			return true
+		}
+	}
+	for j := sq.Col - 1; j >= 0; j-- {
+		piece := p.Board[sq.Row][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == ROOK || piece*by == QUEEN {
+			return true
+		}
+	}
+
+	// Check diagonals (bishop & queen)
+	for i, j := sq.Row+1, sq.Col+1; i < 8 && j < 8; i, j = i+1, j+1 {
+		piece := p.Board[i][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == BISHOP || piece*by == QUEEN {
+			return true
+		}
+	}
+	for i, j := sq.Row-1, sq.Col+1; i >= 0 && j < 8; i, j = i-1, j+1 {
+		piece := p.Board[i][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == BISHOP || piece*by == QUEEN {
+			return true
+		}
+	}
+	for i, j := sq.Row+1, sq.Col-1; i < 8 && j >= 0; i, j = i+1, j-1 {
+		piece := p.Board[i][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == BISHOP || piece*by == QUEEN {
+			return true
+		}
+	}
+	for i, j := sq.Row-1, sq.Col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+		piece := p.Board[i][j]
+		if piece == EMPTY {
+			continue
+		}
+		if piece*by == BISHOP || piece*by == QUEEN {
+			return true
+		}
+	}
+
+	// check knights
+	di := []int{2, 1, -1, -2, -2, -1, 1, 2}
+	dj := []int{1, 2, 2, 1, -1, -2, -2, -1}
+	for k := range di {
+		ii := sq.Row + di[k]
+		jj := sq.Col + dj[k]
+		if ii >= 0 && ii < 8 && jj >= 0 && jj < 8 && p.Board[ii][jj] == KNIGHT*by {
+			return true
+		}
+	}
+
+	// check king
+	for di := -1; di < 2; di++ {
+		for dj := -1; dj < 2; dj++ {
+			if di == 0 && dj == 0 {
+				continue
+			}
+			ii := sq.Row + di
+			jj := sq.Col + dj
+			if ii >= 0 && ii < 8 && jj >= 0 && jj < 8 && p.Board[ii][jj] == KING*by {
+				return true
+			}
+		}
+	}
+
+	// white pawn
+	if by == WHITE && sq.Row-1 >= 0 && sq.Col-1 >= 0 && p.Board[sq.Row-1][sq.Col-1] == PAWN {
+		return true
+	}
+	if by == WHITE && sq.Row-1 >= 0 && sq.Col+1 >= 0 && p.Board[sq.Row-1][sq.Col+1] == PAWN {
+		return true
+	}
+	// black pawn
+	if by == BLACK && sq.Row+1 < 8 && sq.Col-1 >= 0 && p.Board[sq.Row+1][sq.Col-1] == -PAWN {
+		return true
+	}
+	if by == BLACK && sq.Row+1 < 8 && sq.Col+1 < 8 && p.Board[sq.Row+1][sq.Col+1] == -PAWN {
+		return true
+	}
 
 	return false
 }
-*/
+
+func (pos *Position) PrintLegalMoves() {
+	mm := pos.LegalMoves(nil)
+	fmt.Println("Legal moves : ", len(mm))
+	for _, m := range mm {
+		fmt.Println(m.String())
+	}
+}

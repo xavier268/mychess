@@ -7,9 +7,13 @@ import (
 
 // Defines a position in time.
 type Position struct {
-	Board     [][]int8 // 8 x 8 board with pieces. Ligne, colonne. 0-based index. Black pieces are counted as negative.
-	Turn      int8     // white or black  to play next ?
-	EnPassant Square   // en passant square, or zero-value if no en passant option.
+	Board                   [][]int8 // 8 x 8 board with pieces. Ligne, colonne. 0-based index. Black pieces are counted as negative.
+	Turn                    int8     // white or black  to play next ?
+	EnPassant               Square   // en passant square, or zero-value if no en passant option.
+	CanWhiteCastleKingSide  bool
+	CanWhiteCastleQueenSide bool
+	CanBlackCastleKingSide  bool
+	CanBlackCastleQueenSide bool
 }
 
 const ( // Black pieces are negative values of white pieces
@@ -47,17 +51,28 @@ func NewPosition() *Position {
 		p.Board[i] = make([]int8, 8)
 	}
 	p.Turn = WHITE
+	p.CanWhiteCastleKingSide = true
+	p.CanWhiteCastleQueenSide = true
+	p.CanBlackCastleKingSide = true
+	p.CanBlackCastleQueenSide = true
 	return p
 }
 
 // Set the piece, given as KING or -BISHOP, to the locations, specified as A1 or b6 or C4.
-// Useful for debugging.
+// Castle capability unchanged.
 func (p *Position) SetPiece(piece int8, where ...string) {
 	// Set the piece
 	for _, w := range where {
 		sq := SquareFromString(w)
 		p.Board[sq.Row][sq.Col] = piece
 	}
+}
+
+func (p *Position) SetNoCastle() {
+	p.CanWhiteCastleKingSide = false
+	p.CanWhiteCastleQueenSide = false
+	p.CanBlackCastleKingSide = false
+	p.CanBlackCastleQueenSide = false
 }
 
 func SquareFromString(s string) Square {
@@ -101,6 +116,10 @@ func (p *Position) Reset() *Position {
 
 	// Set other values
 	p.Turn = WHITE
+	p.CanBlackCastleKingSide = true
+	p.CanBlackCastleQueenSide = true
+	p.CanWhiteCastleKingSide = true
+	p.CanWhiteCastleQueenSide = true
 
 	// Set empty squares
 	for i := 2; i < 6; i++ {
@@ -189,12 +208,14 @@ func (p *Position) CopyFrom(p2 *Position) {
 		}
 	}
 	p.Turn = p2.Turn
+	p.CanBlackCastleKingSide = p2.CanBlackCastleKingSide
+	p.CanBlackCastleQueenSide = p2.CanBlackCastleQueenSide
+	p.CanWhiteCastleKingSide = p2.CanWhiteCastleKingSide
+	p.CanWhiteCastleQueenSide = p2.CanBlackCastleQueenSide
 }
 
 // Execute move on current position. No cloning, no allocation.
 func (pos *Position) ExecuteMove(m Move) {
-
-	// TODO castling !
 
 	pos.Board[m.To.Row][m.To.Col] = m.Piece
 	pos.Board[m.From.Row][m.From.Col] = EMPTY
@@ -217,6 +238,60 @@ func (pos *Position) ExecuteMove(m Move) {
 	if m.Piece == -PAWN && m.From.Row == 6 && m.To.Row == 4 {
 		// set en passant
 		pos.EnPassant = Square{5, m.To.Col}
+	}
+
+	// handle castling white and inhibiting when king moves
+	if m.Piece == KING {
+		if pos.CanWhiteCastleKingSide && m.From == (Square{0, 4}) && m.To == (Square{0, 6}) {
+			// white king side
+			pos.Board[0][5] = ROOK
+			pos.Board[0][7] = EMPTY
+		}
+		if pos.CanWhiteCastleQueenSide && m.From == (Square{0, 4}) && m.To == (Square{0, 2}) {
+			// white queen side
+			pos.Board[0][3] = ROOK
+			pos.Board[0][0] = EMPTY
+		}
+
+		// Inhibit castling when white king moves
+		pos.CanWhiteCastleKingSide = false
+		pos.CanWhiteCastleQueenSide = false
+	}
+
+	// handle castling black and inhibiting when king moves
+	if m.Piece == -KING {
+		if pos.CanBlackCastleKingSide && m.From == (Square{7, 4}) && m.To == (Square{7, 6}) {
+			// black king side
+			pos.Board[7][5] = -ROOK
+			pos.Board[7][7] = EMPTY
+		}
+		if pos.CanBlackCastleQueenSide && m.From == (Square{7, 4}) && m.To == (Square{7, 2}) {
+			// black queen side
+			pos.Board[7][3] = -ROOK
+			pos.Board[7][0] = EMPTY
+		}
+
+		// Inhibit castling when black king moves
+		pos.CanBlackCastleKingSide = false
+		pos.CanBlackCastleQueenSide = false
+	}
+
+	// Inhibit castling when rook moves
+	if m.Piece == ROOK {
+		if m.From == (Square{0, 0}) {
+			pos.CanWhiteCastleQueenSide = false
+		}
+		if m.From == (Square{0, 7}) {
+			pos.CanWhiteCastleKingSide = false
+		}
+	}
+	if m.Piece == -ROOK {
+		if m.From == (Square{7, 0}) {
+			pos.CanBlackCastleQueenSide = false
+		}
+		if m.From == (Square{7, 7}) {
+			pos.CanBlackCastleKingSide = false
+		}
 	}
 
 	// change turn
