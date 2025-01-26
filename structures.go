@@ -53,6 +53,8 @@ func NewPosition() *Position {
 	for i := 0; i < 8; i++ {
 		p.Board[i] = make([]int8, 8)
 	}
+	p.Turn = WHITE
+	p.History = make([]Move, 0, 50)
 	return p
 }
 
@@ -67,10 +69,10 @@ func (p *Position) SetPiece(piece int8, where ...string) {
 			continue
 		}
 		p.Board[sq.Row][sq.Col] = piece
-		if piece == WHITE && sq.Row == 0 && sq.Col == 4 {
+		if piece == KING {
 			p.WhiteKing = sq
 		}
-		if piece == BLACK && sq.Row == 7 && sq.Col == 4 {
+		if piece == -KING {
 			p.BlackKing = sq
 		}
 	}
@@ -235,11 +237,11 @@ func (pos *Position) ExecuteMove(m Move) {
 	pos.Board[m.From.Row][m.From.Col] = EMPTY
 	if m.Piece == KING {
 		pos.WhiteKing = m.To
-		pos.Clone().WhiteKingMoved = true
+		pos.WhiteKingMoved = true
 	}
 	if m.Piece == -KING {
 		pos.BlackKing = m.To
-		pos.Clone().BlackKingMoved = true
+		pos.BlackKingMoved = true
 	}
 	// Update history
 	pos.History = append(pos.History, m)

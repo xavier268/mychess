@@ -16,13 +16,13 @@ func (pos *Position) LegalMoves(moves []Move) []Move {
 		for j := 0; j < 8; j++ {
 			piece := pos.Board[i][j]
 			if pos.Turn*piece <= 0 {
-				continue // skip if piece is not your own !
+				continue // skip if piece is empty or not your own !
 			}
 			switch piece {
 			case PAWN, -PAWN:
 				moves = pawnMoves(pos, i, j, moves)
 			case KNIGHT, -KNIGHT:
-				moves = knightLegalMoves(pos, i, j, moves)
+				moves = knightMoves(pos, i, j, moves)
 			case BISHOP, -BISHOP:
 				moves = bishopMoves(pos, i, j, moves)
 			case ROOK, -ROOK:
@@ -34,16 +34,15 @@ func (pos *Position) LegalMoves(moves []Move) []Move {
 			}
 		}
 	}
-	return pos.filterIllegalMoves(moves)
+	return moves
 }
 
-// does not check if king is self exposed ...
 func rookMoves(pos *Position, i, j int, moves []Move) []Move {
 	piece := pos.Board[i][j]
 	from := Square{i, j}
 	var m Move
 	var k int
-	for k = i + 1; k < 8 && pos.Board[i][j] == EMPTY; k++ {
+	for k = i + 1; k < 8 && pos.Board[k][j] == EMPTY; k++ {
 		m = Move{Piece: piece, From: from, To: Square{k, j}}
 		moves = append(moves, m)
 	}
@@ -53,7 +52,7 @@ func rookMoves(pos *Position, i, j int, moves []Move) []Move {
 		moves = append(moves, m)
 	}
 
-	for k = i - 1; k >= 0 && pos.Board[i][j] == EMPTY; k-- {
+	for k = i - 1; k >= 0 && pos.Board[k][j] == EMPTY; k-- {
 		m = Move{Piece: piece, From: from, To: Square{k, j}}
 		moves = append(moves, m)
 	}
@@ -63,7 +62,7 @@ func rookMoves(pos *Position, i, j int, moves []Move) []Move {
 		moves = append(moves, m)
 	}
 
-	for k = j + 1; k < 8 && pos.Board[i][j] == EMPTY; k++ {
+	for k = j + 1; k < 8 && pos.Board[i][k] == EMPTY; k++ {
 		m = Move{Piece: piece, From: from, To: Square{i, k}}
 		moves = append(moves, m)
 	}
@@ -72,7 +71,8 @@ func rookMoves(pos *Position, i, j int, moves []Move) []Move {
 		m = Move{Piece: piece, From: from, To: Square{i, k}}
 		moves = append(moves, m)
 	}
-	for k = j - 1; k >= 0 && pos.Board[i][j] == EMPTY; k-- {
+
+	for k = j - 1; k >= 0 && pos.Board[i][k] == EMPTY; k-- {
 		m = Move{Piece: piece, From: from, To: Square{i, k}}
 		moves = append(moves, m)
 	}
@@ -190,7 +190,7 @@ func kingMoves(pos *Position, i, j int, moves []Move) []Move {
 	return moves
 }
 
-func knightLegalMoves(pos *Position, i, j int, moves []Move) []Move {
+func knightMoves(pos *Position, i, j int, moves []Move) []Move {
 	di := []int{2, 1, -1, -2, -2, -1, 1, 2}
 	dj := []int{1, 2, 2, 1, -1, -2, -2, -1}
 
@@ -307,192 +307,164 @@ func blackPawnMoves(pos *Position, i, j int, moves []Move) []Move {
 	return moves
 }
 
-// pb is a position buffer to save and restore position.
-func (pos *Position) isMoveLegal(pb *Position, m Move) bool {
-	if pb == nil {
-		pb = NewPosition()
-	}
-	pb.CopyFrom(pos)
-	pb.ExecuteMove(m)
-
-	if pb.Turn == BLACK && pb.isExposedBy(pb.WhiteKing, BLACK) {
-		return false
-	}
-	if pb.Turn == WHITE && pb.isExposedBy(pb.BlackKing, WHITE) {
-		return false
-	}
-	return true
-}
-
-// Remove illegal moves
-func (pos *Position) filterIllegalMoves(moves []Move) []Move {
-	pb := NewPosition() // buffer
-	mm := make([]Move, 0, len(moves))
-	for _, m := range moves {
-		if pos.isMoveLegal(pb, m) {
-			mm = append(mm, m)
-		}
-	}
-	return mm
-}
-
 // Check if provided square is exposed by "who" player. Who is white or black.
+// CHECK LOGIC AND TESTING NEEDED !!
+/*
 func (pos *Position) isExposedBy(sq Square, who int8) bool {
+	 	// look up
+	   	for i := sq.Row + 1; i < 8; i++ {
+	   		piece := pos.Board[i][sq.Col]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == ROOK || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look down
+	   	for i := sq.Row - 1; i >= 0; i-- {
+	   		piece := pos.Board[i][sq.Col]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == ROOK || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look right
+	   	for j := sq.Col + 1; j < 8; j++ {
+	   		piece := pos.Board[sq.Row][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == ROOK || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look left
+	   	for j := sq.Col - 1; j >= 0; j-- {
+	   		piece := pos.Board[sq.Row][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == ROOK || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look up right
+	   	for i, j := sq.Row+1, sq.Col+1; i < 8 && j < 8; i, j = i+1, j+1 {
+	   		piece := pos.Board[i][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == BISHOP || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look down right
+	   	for i, j := sq.Row-1, sq.Col+1; i >= 0 && j < 8; i, j = i-1, j+1 {
+	   		piece := pos.Board[i][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == BISHOP || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look down left
+	   	for i, j := sq.Row-1, sq.Col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+	   		piece := pos.Board[i][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == BISHOP || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look up left
+	   	for i, j := sq.Row+1, sq.Col-1; i < 8 && j >= 0; i, j = i+1, j-1 {
+	   		piece := pos.Board[i][j]
+	   		if piece == EMPTY {
+	   			continue
+	   		}
+	   		if piece*who == BISHOP || piece*who == QUEEN {
+	   			return true
+	   		}
+	   		break
+	   	}
+	   	// look up knight
+	   	if sq.Row+2 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+2][sq.Col+1] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row+1 < 8 && sq.Col+2 < 8 && pos.Board[sq.Row+1][sq.Col+2] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row-1 >= 0 && sq.Col+2 < 8 && pos.Board[sq.Row-1][sq.Col+2] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row-2 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-2][sq.Col+1] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row-2 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-2][sq.Col-1] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row-1 >= 0 && sq.Col-2 >= 0 && pos.Board[sq.Row-1][sq.Col-2] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row+1 < 8 && sq.Col-2 >= 0 && pos.Board[sq.Row+1][sq.Col-2] == who*KNIGHT {
+	   		return true
+	   	}
+	   	if sq.Row+2 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+2][sq.Col-1] == who*KNIGHT {
+	   		return true
+	   	}
 
-	// look up
-	for i := sq.Row + 1; i < 8; i++ {
-		piece := pos.Board[i][sq.Col]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == ROOK || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look down
-	for i := sq.Row - 1; i >= 0; i-- {
-		piece := pos.Board[i][sq.Col]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == ROOK || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look right
-	for j := sq.Col + 1; j < 8; j++ {
-		piece := pos.Board[sq.Row][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == ROOK || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look left
-	for j := sq.Col - 1; j >= 0; j-- {
-		piece := pos.Board[sq.Row][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == ROOK || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look up right
-	for i, j := sq.Row+1, sq.Col+1; i < 8 && j < 8; i, j = i+1, j+1 {
-		piece := pos.Board[i][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == BISHOP || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look down right
-	for i, j := sq.Row-1, sq.Col+1; i >= 0 && j < 8; i, j = i-1, j+1 {
-		piece := pos.Board[i][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == BISHOP || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look down left
-	for i, j := sq.Row-1, sq.Col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
-		piece := pos.Board[i][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == BISHOP || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look up left
-	for i, j := sq.Row+1, sq.Col-1; i < 8 && j >= 0; i, j = i+1, j-1 {
-		piece := pos.Board[i][j]
-		if piece == EMPTY {
-			continue
-		}
-		if piece*who == BISHOP || piece*who == QUEEN {
-			return true
-		}
-		break
-	}
-	// look up knight
-	if sq.Row+2 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+2][sq.Col+1] == who*KNIGHT {
-		return true
-	}
-	if sq.Row+1 < 8 && sq.Col+2 < 8 && pos.Board[sq.Row+1][sq.Col+2] == who*KNIGHT {
-		return true
-	}
-	if sq.Row-1 >= 0 && sq.Col+2 < 8 && pos.Board[sq.Row-1][sq.Col+2] == who*KNIGHT {
-		return true
-	}
-	if sq.Row-2 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-2][sq.Col+1] == who*KNIGHT {
-		return true
-	}
-	if sq.Row-2 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-2][sq.Col-1] == who*KNIGHT {
-		return true
-	}
-	if sq.Row-1 >= 0 && sq.Col-2 >= 0 && pos.Board[sq.Row-1][sq.Col-2] == who*KNIGHT {
-		return true
-	}
-	if sq.Row+1 < 8 && sq.Col-2 >= 0 && pos.Board[sq.Row+1][sq.Col-2] == who*KNIGHT {
-		return true
-	}
-	if sq.Row+2 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+2][sq.Col-1] == who*KNIGHT {
-		return true
-	}
+	   	// Look for king
+	   	if sq.Row+1 < 8 && pos.Board[sq.Row+1][sq.Col] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Row-1 >= 0 && pos.Board[sq.Row-1][sq.Col] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Col+1 < 8 && pos.Board[sq.Row][sq.Col+1] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Col-1 >= 0 && pos.Board[sq.Row][sq.Col-1] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*KING {
+	   		return true
+	   	}
+	   	if sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*KING {
+	   		return true
+	   	}
 
-	// Look for king
-	if sq.Row+1 < 8 && pos.Board[sq.Row+1][sq.Col] == who*KING {
-		return true
-	}
-	if sq.Row-1 >= 0 && pos.Board[sq.Row-1][sq.Col] == who*KING {
-		return true
-	}
-	if sq.Col+1 < 8 && pos.Board[sq.Row][sq.Col+1] == who*KING {
-		return true
-	}
-	if sq.Col-1 >= 0 && pos.Board[sq.Row][sq.Col-1] == who*KING {
-		return true
-	}
-	if sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*KING {
-		return true
-	}
-	if sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*KING {
-		return true
-	}
-	if sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*KING {
-		return true
-	}
-	if sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*KING {
-		return true
-	}
-
-	// Look for pawn
-	if who == WHITE && sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*PAWN {
-		return true
-	}
-	if who == WHITE && sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*PAWN {
-		return true
-	}
-	if who == BLACK && sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*PAWN {
-		return true
-	}
-	if who == BLACK && sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*PAWN {
-		return true
-	}
+	   	// Look for pawn
+	   	if who == WHITE && sq.Row-1 >= 0 && sq.Col-1 >= 0 && pos.Board[sq.Row-1][sq.Col-1] == who*PAWN {
+	   		return true
+	   	}
+	   	if who == WHITE && sq.Row-1 >= 0 && sq.Col+1 < 8 && pos.Board[sq.Row-1][sq.Col+1] == who*PAWN {
+	   		return true
+	   	}
+	   	if who == BLACK && sq.Row+1 < 8 && sq.Col-1 >= 0 && pos.Board[sq.Row+1][sq.Col-1] == who*PAWN {
+	   		return true
+	   	}
+	   	if who == BLACK && sq.Row+1 < 8 && sq.Col+1 < 8 && pos.Board[sq.Row+1][sq.Col+1] == who*PAWN {
+	   		return true
+	   	}
 
 	return false
-
 }
+*/

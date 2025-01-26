@@ -25,15 +25,37 @@ func TestPlayRandomGame(t *testing.T) {
 	}
 }
 
-func TestPreparaPosition(t *testing.T) {
+func TestPreparedPosition1(t *testing.T) {
+	p := tp1()
+
+	mm := p.LegalMoves(make([]Move, 0, 40))
+	if len(mm) == 0 {
+		fmt.Println("No more legal moves !")
+	}
+	fmt.Println("Legal moves :", len(mm))
+	// for _, m := range mm {
+	// 	fmt.Println(m.String())
+	// }
+	if len(mm) != 44 {
+		t.Errorf("Expected 44 legal moves, got %d", len(mm))
+	}
+
+}
+
+// Test position 1
+func tp1() *Position {
+
 	p := NewPosition()
 
 	p.SetPiece(KING, "d3")
-	p.SetPiece(ROOK, "d4")
+	p.SetPiece(QUEEN, "d4")
+	p.SetPiece(KNIGHT, "d5")
+	p.SetPiece(BISHOP, "c5")
+	p.SetPiece(ROOK, "e5")
+	p.SetPiece(PAWN, "a2", "c3")
 
+	p.SetPiece(-ROOK, "b3")
 	p.SetPiece(-KING, "c8")
-	p.SetPiece(-QUEEN, "c7", "d8")
 
-	fmt.Println(p.String())
-
+	return p
 }
