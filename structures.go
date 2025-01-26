@@ -7,14 +7,9 @@ import (
 
 // Defines a position in time.
 type Position struct {
-	Board          [][]int8 // 8 x 8 board with pieces. Ligne, colonne. 0-based index. Black pieces are counted as negative.
-	WhiteKing      Square   // Where is the white king
-	BlackKing      Square   // Where is the black king
-	WhiteKingMoved bool     // Did the king moved already (cannot castle any more)
-	BlackKingMoved bool     // Did the king moved already (cannot castle any more)
-	History        []Move   // History of moves from start of game
-	Turn           int8     // white or black  to play next ?
-	EnPassant      Square   // en passant square, or zero-value if no en passant option.
+	Board     [][]int8 // 8 x 8 board with pieces. Ligne, colonne. 0-based index. Black pieces are counted as negative.
+	Turn      int8     // white or black  to play next ?
+	EnPassant Square   // en passant square, or zero-value if no en passant option.
 }
 
 const ( // Black pieces are negative values of white pieces
@@ -52,7 +47,6 @@ func NewPosition() *Position {
 		p.Board[i] = make([]int8, 8)
 	}
 	p.Turn = WHITE
-	p.History = make([]Move, 0, 50)
 	return p
 }
 
@@ -63,12 +57,6 @@ func (p *Position) SetPiece(piece int8, where ...string) {
 	for _, w := range where {
 		sq := SquareFromString(w)
 		p.Board[sq.Row][sq.Col] = piece
-		if piece == KING {
-			p.WhiteKing = sq
-		}
-		if piece == -KING {
-			p.BlackKing = sq
-		}
 	}
 }
 
@@ -112,11 +100,6 @@ func (p *Position) Reset() *Position {
 	p.Board[7][7] = -ROOK
 
 	// Set other values
-	p.History = p.History[:0]
-	p.BlackKing = Square{7, 4}
-	p.WhiteKing = Square{0, 4}
-	p.BlackKingMoved = false
-	p.WhiteKingMoved = false
 	p.Turn = WHITE
 
 	// Set empty squares
@@ -205,11 +188,6 @@ func (p *Position) CopyFrom(p2 *Position) {
 			p.Board[i][j] = p2.Board[i][j]
 		}
 	}
-	p.WhiteKing = p2.WhiteKing
-	p.BlackKing = p2.BlackKing
-	p.WhiteKingMoved = p2.WhiteKingMoved
-	p.BlackKingMoved = p2.BlackKingMoved
-	p.History = append(p.History[:0], p2.History...)
 	p.Turn = p2.Turn
 }
 
@@ -220,14 +198,6 @@ func (pos *Position) ExecuteMove(m Move) {
 
 	pos.Board[m.To.Row][m.To.Col] = m.Piece
 	pos.Board[m.From.Row][m.From.Col] = EMPTY
-	if m.Piece == KING {
-		pos.WhiteKing = m.To
-		pos.WhiteKingMoved = true
-	}
-	if m.Piece == -KING {
-		pos.BlackKing = m.To
-		pos.BlackKingMoved = true
-	}
 
 	// Use existing en passant value to capture the pawn if we targeted the en passant square
 	if pos.EnPassant != (Square{}) && m.To == pos.EnPassant {
@@ -248,8 +218,7 @@ func (pos *Position) ExecuteMove(m Move) {
 		// set en passant
 		pos.EnPassant = Square{5, m.To.Col}
 	}
-	// Update history
-	pos.History = append(pos.History, m)
+
 	// change turn
 	pos.Turn = -pos.Turn
 
