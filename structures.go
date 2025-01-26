@@ -13,10 +13,8 @@ type Position struct {
 	WhiteKingMoved bool     // Did the king moved already (cannot castle any more)
 	BlackKingMoved bool     // Did the king moved already (cannot castle any more)
 	History        []Move   // History of moves from start of game
-	Value          float64  // positive means favorable for white, negative for black
 	Turn           int8     // white or black  to play next ?
-	Draw           bool     // true if position is a draw
-	StaleMate      bool     // true if position is a draw - the player which should play now lost.
+	EnPassant      Square   // en passant square, or zero-value if no en passant option.
 }
 
 const ( // Black pieces are negative values of white pieces
@@ -63,11 +61,7 @@ func NewPosition() *Position {
 func (p *Position) SetPiece(piece int8, where ...string) {
 	// Set the piece
 	for _, w := range where {
-		sq, err := SquareFromString(w)
-		if err != nil {
-			fmt.Println("Ignoring coordinates : ", w, "because", err)
-			continue
-		}
+		sq := SquareFromString(w)
 		p.Board[sq.Row][sq.Col] = piece
 		if piece == KING {
 			p.WhiteKing = sq
@@ -78,17 +72,17 @@ func (p *Position) SetPiece(piece int8, where ...string) {
 	}
 }
 
-func SquareFromString(s string) (Square, error) {
+func SquareFromString(s string) Square {
 	if len(s) != 2 {
-		return Square{}, fmt.Errorf("Square must be exctly 2 characters")
+		panic("Square must be exctly 2 characters")
 	}
 	s = strings.ToLower(s)
 	col := int(s[0] - 'a')
 	row := int(s[1] - '1')
 	if col < 0 || col > 7 || row < 0 || row > 7 {
-		return Square{}, fmt.Errorf("Square out of bounds")
+		panic("Square out of bounds")
 	}
-	return Square{row, col}, nil
+	return Square{row, col}
 }
 
 // Reset position to game start position. No allocation is made.
@@ -124,9 +118,7 @@ func (p *Position) Reset() *Position {
 	p.BlackKingMoved = false
 	p.WhiteKingMoved = false
 	p.Turn = WHITE
-	p.Draw = false
-	p.StaleMate = false
-	p.Value = 0.0
+
 	// Set empty squares
 	for i := 2; i < 6; i++ {
 		for j := 0; j < 8; j++ {
@@ -162,8 +154,6 @@ func (p *Position) String() string {
 		reset   = "\033[0m"
 		bgWhite = "\033[47m"
 		bgGray  = "\033[100m"
-		// fgBlack = "\033[30m"
-		// fgWhite = "\033[97m"
 	)
 
 	var buf strings.Builder
@@ -220,18 +210,13 @@ func (p *Position) CopyFrom(p2 *Position) {
 	p.WhiteKingMoved = p2.WhiteKingMoved
 	p.BlackKingMoved = p2.BlackKingMoved
 	p.History = append(p.History[:0], p2.History...)
-	p.Value = p2.Value
 	p.Turn = p2.Turn
-	p.Draw = p2.Draw
-	p.StaleMate = p2.StaleMate
 }
 
 // Execute move on current position. No cloning, no allocation.
 func (pos *Position) ExecuteMove(m Move) {
 
 	// TODO castling !
-
-	// TODO EN passant !
 
 	pos.Board[m.To.Row][m.To.Col] = m.Piece
 	pos.Board[m.From.Row][m.From.Col] = EMPTY
@@ -243,6 +228,26 @@ func (pos *Position) ExecuteMove(m Move) {
 		pos.BlackKing = m.To
 		pos.BlackKingMoved = true
 	}
+
+	// Use existing en passant value to capture the pawn if we targeted the en passant square
+	if pos.EnPassant != (Square{}) && m.To == pos.EnPassant {
+		if pos.Turn == WHITE {
+			pos.Board[4][m.To.Col] = EMPTY // capture the BLACK pawn
+		} else {
+			pos.Board[3][m.To.Col] = EMPTY // capture the white pawn
+		}
+	}
+
+	// Now, set a new en passant value, if required
+	pos.EnPassant = Square{}
+	if m.Piece == PAWN && m.From.Row == 1 && m.To.Row == 3 {
+		// set en passant
+		pos.EnPassant = Square{2, m.To.Col}
+	}
+	if m.Piece == -PAWN && m.From.Row == 6 && m.To.Row == 4 {
+		// set en passant
+		pos.EnPassant = Square{5, m.To.Col}
+	}
 	// Update history
 	pos.History = append(pos.History, m)
 	// change turn
@@ -250,6 +255,7 @@ func (pos *Position) ExecuteMove(m Move) {
 
 }
 
+// Convert color code or piece into string (White / Black)
 func StringColor(color int8) string {
 	if color > 0 {
 		return "White"

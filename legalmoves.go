@@ -3,9 +3,9 @@ package mychess
 // Generate all legal moves from position. A move slice is provided, avoiding allocation as much as possible.
 // If it is nil, a new slice will be allocated.
 func (pos *Position) LegalMoves(moves []Move) []Move {
-	if pos.Draw || pos.StaleMate {
-		return nil
-	}
+	// if pos.Draw || pos.StaleMate {
+	// 	return nil
+	// }
 	if moves == nil {
 		moves = make([]Move, 0, 40)
 	} else {
@@ -232,15 +232,14 @@ func whitePawnMoves(pos *Position, i, j int, moves []Move) []Move {
 		m = Move{Piece: piece, From: from, To: Square{i + 2, j}}
 		moves = append(moves, m)
 	}
-	// capture left
-	if i+1 < 8 && j-1 >= 0 && pos.Board[i+1][j-1] < 0 {
+	// capture left, including en passant
+	if i+1 < 8 && j-1 >= 0 && (pos.Board[i+1][j-1] < 0 || pos.EnPassant == Square{i + 1, j - 1}) {
 		m = Move{Piece: piece, From: from, To: Square{i + 1, j - 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
-	// capture right
-	if i+1 < 8 && j+1 < 8 && pos.Board[i+1][j+1] < 0 {
-		m = Move{Piece: piece, From: from, To: Square{i + 1, j + 1}}
+	// capture right, including en passant
+	if i+1 < 8 && j+1 < 8 && (pos.Board[i+1][j+1] < 0 || pos.EnPassant == Square{i + 1, j + 1}) {
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
@@ -292,14 +291,14 @@ func blackPawnMoves(pos *Position, i, j int, moves []Move) []Move {
 		m = Move{Piece: piece, From: from, To: Square{i - 2, j}}
 		moves = append(moves, m)
 	}
-	// capture left
-	if i-1 >= 0 && j-1 >= 0 && pos.Board[i-1][j-1] > 0 {
+	// capture left, including en passant
+	if i-1 >= 0 && j-1 >= 0 && (pos.Board[i-1][j-1] > 0 || pos.EnPassant == Square{i - 1, j - 1}) {
 		m = Move{Piece: piece, From: from, To: Square{i - 1, j - 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
-	// capture right
-	if i-1 >= 0 && j+1 < 8 && pos.Board[i-1][j+1] > 0 {
+	// capture right, including en passant
+	if i-1 >= 0 && j+1 < 8 && (pos.Board[i-1][j+1] > 0 || pos.EnPassant == Square{i - 1, j + 1}) {
 		m = Move{Piece: piece, From: from, To: Square{i - 1, j + 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)

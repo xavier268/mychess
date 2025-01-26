@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-func TestDisplay(t *testing.T) {
-	// Create a new position
-	pos := NewPosition().Reset()
-	// Display it
-	fmt.Println(pos)
-}
-
 func TestDisplayMoves(t *testing.T) {
 	mm := []Move{
 		{PAWN, Square{1, 1}, Square{2, 1}},
@@ -32,8 +25,11 @@ func TestLegalMovesAtStart(t *testing.T) {
 	fmt.Println(pos)
 	// Display legal moves
 	moves := pos.LegalMoves(make([]Move, 0, 40))
-	fmt.Println("Legal moves : ")
-	for _, m := range moves {
-		fmt.Println(m.String())
+	fmt.Println("Legal moves at start : ", len(moves))
+	// for _, m := range moves {
+	// 	fmt.Println(m.String())
+	// }
+	if len(moves) != 20 {
+		t.Error("Expected 20 moves, got ", len(moves))
 	}
 }
