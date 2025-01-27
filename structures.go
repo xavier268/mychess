@@ -128,8 +128,9 @@ func (p *Position) Reset() *Position {
 	p.CanBlackCastleQueenSide = true
 	p.CanWhiteCastleKingSide = true
 	p.CanWhiteCastleQueenSide = true
-	p.WhiteKing = Square{4, 0}
-	p.BlackKing = Square{4, 7}
+	p.WhiteKing = Square{0, 4}
+	p.BlackKing = Square{7, 4}
+	p.EnPassant = Square{}
 
 	// Set empty squares
 	for i := 2; i < 6; i++ {
@@ -141,14 +142,20 @@ func (p *Position) Reset() *Position {
 }
 
 var DISPLAY = map[int8]string{
-	// White is hollow, black is full
-	-WHITE: "♟", WHITE: "♙",
-	-PAWN: "♟", PAWN: "♙",
-	-KNIGHT: "♞", KNIGHT: "♘",
-	-BISHOP: "♝", BISHOP: "♗",
-	-ROOK: "♜", ROOK: "♖",
-	-QUEEN: "♛", QUEEN: "♕",
-	-KING: "♚", KING: "♔",
+	// // White is hollow, black is full
+	// -PAWN: "♟", PAWN: "♙",
+	// -KNIGHT: "♞", KNIGHT: "♘",
+	// -BISHOP: "♝", BISHOP: "♗",
+	// -ROOK: "♜", ROOK: "♖",
+	// -QUEEN: "♛", QUEEN: "♕",
+	// -KING: "♚", KING: "♔",
+	// WHITE CAPITALIZED, black lower case
+	-PAWN: "p", PAWN: "P",
+	-KNIGHT: "n", KNIGHT: "N",
+	-BISHOP: "b", BISHOP: "B",
+	-ROOK: "r", ROOK: "R",
+	-QUEEN: "q", QUEEN: "Q",
+	-KING: "k", KING: "K",
 	EMPTY: " ",
 }
 
@@ -224,6 +231,7 @@ func (p *Position) CopyFrom(p2 *Position) {
 	p.CanWhiteCastleQueenSide = p2.CanBlackCastleQueenSide
 	p.BlackKing = p2.BlackKing
 	p.WhiteKing = p2.WhiteKing
+	p.EnPassant = p2.EnPassant
 }
 
 // Execute move on current position. No cloning, no allocation.

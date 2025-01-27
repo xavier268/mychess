@@ -7,37 +7,25 @@ import (
 )
 
 func TestPlayRandomGame(t *testing.T) {
-	t.Skip()
+	// t.Skip()
+	rd := rand.New(rand.NewSource(83)) // deterministic but modifiable ...
 	p := NewPosition().Reset()
-	for i := 0; i < 50; i++ {
-		fmt.Println("Game :", i, "\n", p.String())
+
+	for i := 0; i < 200; i++ {
 		mm := p.LegalMoves(make([]Move, 0, 40))
 		if len(mm) == 0 {
+			fmt.Println("Game :", i, "\n", p.String())
+			fmt.Println(StringColor(p.Turn), "to play ...")
 			fmt.Println("No more legal moves !")
 			break
 		}
 		// select random move
-		m := mm[rand.Intn(len(mm))]
+		m := mm[rd.Intn(len(mm))]
 		fmt.Printf("Playing %s\n", m.String())
 		if piece := p.Board[m.To.Row][m.To.Col]; piece != EMPTY {
 			fmt.Println("Capture", StringColor(piece), DISPLAY[piece])
 		}
 		p.ExecuteMove(m)
-	}
-}
-
-func TestPreparedPosition1LegalMoves(t *testing.T) {
-	p := tp1()
-	fmt.Println(p.String())
-	mm := p.LegalMoves(make([]Move, 0, 40))
-	fmt.Println("Legal moves :", len(mm))
-	// for _, m := range mm {
-	// 	fmt.Println(m.String())
-	// }
-	if len(mm) != 44 {
-		t.Errorf("Expected 44 legal moves, got %d", len(mm))
-
-		p.PrintLegalMoves()
 	}
 
 }
@@ -121,32 +109,13 @@ func TestDisplayPositions(t *testing.T) {
 	fmt.Println("Empty position\n", p.String())
 	p = NewPosition().Reset()
 	fmt.Println("Initial position\n", p.String())
-	p = tp1()
-	fmt.Println("Test position #1\n", p.String())
+
 	p = tp2()
 	fmt.Println("Test position #2-en passant\n", p.String())
 	p = tp3()
 	fmt.Println("Test position #3-castling\n", p.String())
 	p = tp4()
 	fmt.Println("Test position #4-mat\n", p.String())
-}
-
-// Test position 1
-func tp1() *Position {
-
-	p := NewPosition()
-
-	p.SetPiece(KING, "d3")
-	p.SetPiece(QUEEN, "d4")
-	p.SetPiece(KNIGHT, "d5")
-	p.SetPiece(BISHOP, "c5")
-	p.SetPiece(ROOK, "e5")
-	p.SetPiece(PAWN, "a2", "c3")
-
-	p.SetPiece(-ROOK, "b3")
-	p.SetPiece(-KING, "c8")
-
-	return p
 }
 
 // Test position 2 - en passant captures

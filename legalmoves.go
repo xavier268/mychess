@@ -35,6 +35,7 @@ func (pos *Position) LegalMoves(moves []Move) []Move {
 			}
 		}
 	}
+	//fmt.Println("debug : before filtering", len(moves))
 	moves = pos.filterLegalMoves(moves)
 	return moves
 }
@@ -477,7 +478,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 	if by == WHITE && sq.Row-1 >= 0 && sq.Col-1 >= 0 && p.Board[sq.Row-1][sq.Col-1] == PAWN {
 		return true
 	}
-	if by == WHITE && sq.Row-1 >= 0 && sq.Col+1 >= 0 && p.Board[sq.Row-1][sq.Col+1] == PAWN {
+	if by == WHITE && sq.Row-1 >= 0 && sq.Col+1 < 8 && p.Board[sq.Row-1][sq.Col+1] == PAWN {
 		return true
 	}
 	// black pawn
