@@ -516,3 +516,12 @@ func (pos *Position) filterLegalMoves(moves []Move) []Move {
 	}
 	return filtered
 }
+
+// Is the specified player in check by the other one ?
+func (pos *Position) IsCheck(player int8) bool {
+	if player == WHITE {
+		return pos.isAttacked(pos.WhiteKing, BLACK)
+	} else {
+		return pos.isAttacked(pos.BlackKing, WHITE)
+	}
+}

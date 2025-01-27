@@ -17,6 +17,11 @@ func TestPlayRandomGame(t *testing.T) {
 			fmt.Println("Game :", i, "\n", p.String())
 			fmt.Println(StringColor(p.Turn), "to play ...")
 			fmt.Println("No more legal moves !")
+			if p.IsCheck(p.Turn) {
+				fmt.Println(StringColor(p.Turn), "is Checkmate !")
+			} else {
+				fmt.Println("Draw !")
+			}
 			break
 		}
 		// select random move
