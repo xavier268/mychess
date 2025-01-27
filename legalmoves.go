@@ -35,6 +35,7 @@ func (pos *Position) LegalMoves(moves []Move) []Move {
 			}
 		}
 	}
+	moves = pos.filterLegalMoves(moves)
 	return moves
 }
 
@@ -327,13 +328,13 @@ func castleMoves(pos *Position, sq Square, moves []Move) []Move {
 // king is already in required position
 func whiteCastleMoves(pos *Position, sq Square, moves []Move) []Move {
 	// check queen side
-	if pos.CanWhiteCastleQueenSide && pos.Board[0][1] == EMPTY && pos.Board[0][2] == EMPTY && pos.Board[0][3] == EMPTY {
+	if pos.CanWhiteCastleQueenSide && pos.Board[0][0] == ROOK && pos.Board[0][1] == EMPTY && pos.Board[0][2] == EMPTY && pos.Board[0][3] == EMPTY {
 		if !pos.isAttacked(Square{0, 2}, BLACK) && !pos.isAttacked(Square{0, 3}, BLACK) {
 			moves = append(moves, Move{Piece: KING, From: sq, To: Square{0, 2}})
 		}
 	}
 	// check king side
-	if pos.CanWhiteCastleKingSide && pos.Board[0][5] == EMPTY && pos.Board[0][6] == EMPTY {
+	if pos.CanWhiteCastleKingSide && pos.Board[0][5] == EMPTY && pos.Board[0][6] == EMPTY && pos.Board[0][7] == ROOK {
 		if !pos.isAttacked(Square{0, 5}, BLACK) && !pos.isAttacked(Square{0, 6}, BLACK) {
 			moves = append(moves, Move{Piece: KING, From: sq, To: Square{0, 6}})
 		}
@@ -343,13 +344,13 @@ func whiteCastleMoves(pos *Position, sq Square, moves []Move) []Move {
 
 func blackCastleMoves(pos *Position, sq Square, moves []Move) []Move {
 	// check queen side
-	if pos.CanBlackCastleQueenSide && pos.Board[7][1] == EMPTY && pos.Board[7][2] == EMPTY && pos.Board[7][3] == EMPTY {
+	if pos.CanBlackCastleQueenSide && pos.Board[7][0] == -ROOK && pos.Board[7][1] == EMPTY && pos.Board[7][2] == EMPTY && pos.Board[7][3] == EMPTY {
 		if !pos.isAttacked(Square{7, 2}, WHITE) && !pos.isAttacked(Square{7, 3}, WHITE) {
 			moves = append(moves, Move{Piece: -KING, From: sq, To: Square{7, 2}})
 		}
 	}
 	// check king side
-	if pos.CanBlackCastleKingSide && pos.Board[7][5] == EMPTY && pos.Board[7][6] == EMPTY {
+	if pos.CanBlackCastleKingSide && pos.Board[7][5] == EMPTY && pos.Board[7][6] == EMPTY && pos.Board[7][7] == -ROOK {
 		if !pos.isAttacked(Square{7, 5}, WHITE) && !pos.isAttacked(Square{7, 6}, WHITE) {
 			moves = append(moves, Move{Piece: -KING, From: sq, To: Square{7, 6}})
 		}
@@ -370,6 +371,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == ROOK || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 	for i := sq.Row - 1; i >= 0; i-- {
 		piece := p.Board[i][sq.Col]
@@ -379,6 +381,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == ROOK || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 
 	// check horizontals (rook & queen)
@@ -390,6 +393,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == ROOK || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 	for j := sq.Col - 1; j >= 0; j-- {
 		piece := p.Board[sq.Row][j]
@@ -399,6 +403,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == ROOK || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 
 	// Check diagonals (bishop & queen)
@@ -410,6 +415,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == BISHOP || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 	for i, j := sq.Row-1, sq.Col+1; i >= 0 && j < 8; i, j = i-1, j+1 {
 		piece := p.Board[i][j]
@@ -419,6 +425,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == BISHOP || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 	for i, j := sq.Row+1, sq.Col-1; i < 8 && j >= 0; i, j = i+1, j-1 {
 		piece := p.Board[i][j]
@@ -428,6 +435,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == BISHOP || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 	for i, j := sq.Row-1, sq.Col-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
 		piece := p.Board[i][j]
@@ -437,6 +445,7 @@ func (p *Position) isAttacked(sq Square, by int8) bool {
 		if piece*by == BISHOP || piece*by == QUEEN {
 			return true
 		}
+		break
 	}
 
 	// check knights
@@ -488,4 +497,21 @@ func (pos *Position) PrintLegalMoves() {
 	for _, m := range mm {
 		fmt.Println(m.String())
 	}
+}
+
+// filter legal moves, removing illegal moves where king is self exposed
+func (pos *Position) filterLegalMoves(moves []Move) []Move {
+	filtered := make([]Move, 0, len(moves))
+	pp := pos.Clone()
+
+	for _, m := range moves {
+		pp.CopyFrom(pos)
+		pp.ExecuteMove(m)
+		if (pos.Turn == WHITE && pp.isAttacked(pp.WhiteKing, BLACK)) ||
+			(pos.Turn == BLACK && pp.isAttacked(pp.BlackKing, WHITE)) {
+			continue // illegal move !
+		}
+		filtered = append(filtered, m)
+	}
+	return filtered
 }

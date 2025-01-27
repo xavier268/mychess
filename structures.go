@@ -14,6 +14,8 @@ type Position struct {
 	CanWhiteCastleQueenSide bool
 	CanBlackCastleKingSide  bool
 	CanBlackCastleQueenSide bool
+	WhiteKing               Square
+	BlackKing               Square
 }
 
 const ( // Black pieces are negative values of white pieces
@@ -65,6 +67,12 @@ func (p *Position) SetPiece(piece int8, where ...string) {
 	for _, w := range where {
 		sq := SquareFromString(w)
 		p.Board[sq.Row][sq.Col] = piece
+		if piece == KING {
+			p.WhiteKing = sq
+		}
+		if piece == -KING {
+			p.BlackKing = sq
+		}
 	}
 }
 
@@ -120,6 +128,8 @@ func (p *Position) Reset() *Position {
 	p.CanBlackCastleQueenSide = true
 	p.CanWhiteCastleKingSide = true
 	p.CanWhiteCastleQueenSide = true
+	p.WhiteKing = Square{4, 0}
+	p.BlackKing = Square{4, 7}
 
 	// Set empty squares
 	for i := 2; i < 6; i++ {
@@ -212,6 +222,8 @@ func (p *Position) CopyFrom(p2 *Position) {
 	p.CanBlackCastleQueenSide = p2.CanBlackCastleQueenSide
 	p.CanWhiteCastleKingSide = p2.CanWhiteCastleKingSide
 	p.CanWhiteCastleQueenSide = p2.CanBlackCastleQueenSide
+	p.BlackKing = p2.BlackKing
+	p.WhiteKing = p2.WhiteKing
 }
 
 // Execute move on current position. No cloning, no allocation.
@@ -242,6 +254,7 @@ func (pos *Position) ExecuteMove(m Move) {
 
 	// handle castling white and inhibiting when king moves
 	if m.Piece == KING {
+		pos.WhiteKing = m.To
 		if pos.CanWhiteCastleKingSide && m.From == (Square{0, 4}) && m.To == (Square{0, 6}) {
 			// white king side
 			pos.Board[0][5] = ROOK
@@ -260,6 +273,7 @@ func (pos *Position) ExecuteMove(m Move) {
 
 	// handle castling black and inhibiting when king moves
 	if m.Piece == -KING {
+		pos.BlackKing = m.To
 		if pos.CanBlackCastleKingSide && m.From == (Square{7, 4}) && m.To == (Square{7, 6}) {
 			// black king side
 			pos.Board[7][5] = -ROOK

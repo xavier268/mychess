@@ -28,17 +28,16 @@ func TestPlayRandomGame(t *testing.T) {
 
 func TestPreparedPosition1LegalMoves(t *testing.T) {
 	p := tp1()
-
+	fmt.Println(p.String())
 	mm := p.LegalMoves(make([]Move, 0, 40))
-	if len(mm) == 0 {
-		fmt.Println("No more legal moves !")
-	}
 	fmt.Println("Legal moves :", len(mm))
 	// for _, m := range mm {
 	// 	fmt.Println(m.String())
 	// }
 	if len(mm) != 44 {
 		t.Errorf("Expected 44 legal moves, got %d", len(mm))
+
+		p.PrintLegalMoves()
 	}
 
 }
@@ -63,6 +62,7 @@ func TestEnPassant2(t *testing.T) {
 	// }
 	if len(mm) != 22 {
 		t.Errorf("Expected 22 legal moves, got %d", len(mm))
+		p.PrintLegalMoves()
 	}
 	fmt.Println("Assume BLACK ROOK takes en passant b3")
 	m = Move{Piece: -ROOK, From: SquareFromString("e3"), To: SquareFromString("b3")}
@@ -106,6 +106,16 @@ func TestCastling3(t *testing.T) {
 	}
 }
 
+func TestMat(t *testing.T) {
+	p := tp4()
+	fmt.Println("Test position #4, is mat\n", p.String())
+	mm := p.LegalMoves(make([]Move, 0, 40))
+	if len(mm) != 0 {
+		t.Errorf("Expected no legal moves, got %d", len(mm))
+	}
+	p.PrintLegalMoves()
+}
+
 func TestDisplayPositions(t *testing.T) {
 	p := NewPosition()
 	fmt.Println("Empty position\n", p.String())
@@ -117,6 +127,8 @@ func TestDisplayPositions(t *testing.T) {
 	fmt.Println("Test position #2-en passant\n", p.String())
 	p = tp3()
 	fmt.Println("Test position #3-castling\n", p.String())
+	p = tp4()
+	fmt.Println("Test position #4-mat\n", p.String())
 }
 
 // Test position 1
@@ -166,4 +178,34 @@ func tp3() *Position {
 	p.SetPiece(-ROOK, "a8", "h8")
 
 	return p
+}
+
+// Test position 4 : mat
+func tp4() *Position {
+
+	p := NewPosition()
+
+	p.SetPiece(KING, "e1")
+	p.SetPiece(-KING, "e8")
+
+	p.SetPiece(-ROOK, "a1", "a2")
+
+	return p
+}
+
+func TestLegalMovesAtStart(t *testing.T) {
+	// Create a new position
+	pos := NewPosition().Reset()
+	// Display it
+	fmt.Println(pos)
+	// Display legal moves
+	moves := pos.LegalMoves(make([]Move, 0, 40))
+	fmt.Println("Legal moves at start : ", len(moves))
+	// for _, m := range moves {
+	// 	fmt.Println(m.String())
+	// }
+	if len(moves) != 20 {
+		t.Error("Expected 20 moves, got ", len(moves))
+		pos.PrintLegalMoves()
+	}
 }

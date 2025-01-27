@@ -17,19 +17,3 @@ func TestDisplayMoves(t *testing.T) {
 		fmt.Println(m.String())
 	}
 }
-
-func TestLegalMovesAtStart(t *testing.T) {
-	// Create a new position
-	pos := NewPosition().Reset()
-	// Display it
-	fmt.Println(pos)
-	// Display legal moves
-	moves := pos.LegalMoves(make([]Move, 0, 40))
-	fmt.Println("Legal moves at start : ", len(moves))
-	// for _, m := range moves {
-	// 	fmt.Println(m.String())
-	// }
-	if len(moves) != 20 {
-		t.Error("Expected 20 moves, got ", len(moves))
-	}
-}
