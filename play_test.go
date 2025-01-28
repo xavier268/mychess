@@ -31,6 +31,9 @@ func TestPlayRandomGame(t *testing.T) {
 			fmt.Println("Capture", StringColor(piece), DISPLAY[piece])
 		}
 		p.ExecuteMove(m)
+		if p.IsCheck(p.Turn) {
+			fmt.Println("Check !")
+		}
 	}
 
 }
