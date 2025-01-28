@@ -1,4 +1,4 @@
-package mychess
+package position
 
 import (
 	"fmt"
@@ -17,6 +17,8 @@ type Position struct {
 	WhiteKing               Square
 	BlackKing               Square
 }
+
+type Piece = int8
 
 const ( // Black pieces are negative values of white pieces
 	EMPTY int8 = iota

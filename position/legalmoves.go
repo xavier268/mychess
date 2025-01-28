@@ -1,4 +1,4 @@
-package mychess
+package position
 
 import "fmt"
 
