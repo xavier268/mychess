@@ -19,7 +19,7 @@ func main() {
 	root := eval.NewNode(position.NewPosition().Reset())
 	root.Expand()
 	root.Expand()
-	root.ExpandBestN(10)
+	root.ExpandBestN(6)
 
 	fmt.Println(root.P.String())
 
@@ -37,7 +37,7 @@ func main() {
 			}
 
 		} else { // ordi
-			root.ExpandBestN(6)
+			root.ExpandBestN(4)
 			mi, _, _ = root.SelectBestMove()
 		}
 
