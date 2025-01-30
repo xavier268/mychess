@@ -115,15 +115,16 @@ func (n *Node) Expand() {
 }
 
 // Explore the best branch, and expand its leave.
-func (n *Node) ExpandBest() {
+func (n *Node) ExpandBest() *Node {
 	b := n.findBestLeave()
 	b.Expand()
+	return b
 }
 
 func (n *Node) ExpandBestN(count int) {
-	n.ExpandBest()
+	b := n.ExpandBest()
 	if count > 1 {
-		n.ExpandBestN(count - 1)
+		b.ExpandBestN(count - 1)
 	}
 }
 
