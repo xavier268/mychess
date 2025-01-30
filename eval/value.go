@@ -1,6 +1,9 @@
 package eval
 
-import "math"
+import (
+	"math"
+	"math/rand/v2"
+)
 
 type Piece = int8
 
@@ -12,6 +15,7 @@ var (
 // Basic evaluation of a position, by setting a value for each piece.
 // Counted from the point of view of the player who has to play now.
 // Positive = better.
+// A small random value is always added for non predictibility.
 func basicEval(p *Position) float64 {
 	var v float64
 	for i := 0; i < 8; i++ {
@@ -31,6 +35,7 @@ func basicEval(p *Position) float64 {
 	if p.CanBlackCastleQueenSide {
 		v -= 0.5
 	}
+	v += 0.0001 * (rand.Float64() - 0.5)
 	return v * float64(p.Turn)
 }
 

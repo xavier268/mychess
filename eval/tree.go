@@ -35,7 +35,7 @@ type Node struct {
 }
 
 // Create a new Node for the provided position.
-// Value is initially set to a simple piece count.
+// Value is initially set to a simple piece count and legal moves are computed.
 func NewNode(p *Position) *Node {
 	n := &Node{P: p}
 	n.Moves = p.LegalMoves(nil)
@@ -57,19 +57,13 @@ func NewNode(p *Position) *Node {
 }
 
 // Compute value of given Node, using a min/max strategy, based only upon current available subtrees.
-// Tree expansion is frozen during evaluation.
 func (n *Node) Eval() (v float64, depth int) {
 
-	// TODO - need better protection against nil dereferencing !
 	// evaluate value recursively
-	if len(n.Moves) == 0 {
-		return n.value, 1 // TODO - ici, se poser la question du draw vs stalemate pour fixer la valeur ?
-	}
-	v, depth = WORSTVALUE, -1
-	for _, c := range n.children[1:] {
-		// TODO - Mettre un marqueur si on a trouvé au moins un children non nul ... sinon, utiliser value !
+	v, depth = n.value, 0 // this will be either draw or stalemate if no move, basicValue if a legal move is available.
+	for _, c := range n.children {
 		if c == nil {
-			continue
+			continue // keep value
 		}
 		vc, dc := c.Eval()
 		v = max(v, -vc)
@@ -78,47 +72,66 @@ func (n *Node) Eval() (v float64, depth int) {
 	return v, depth
 }
 
-// return zero-value if no legal move available (stalemate or draw).
-// The whole tree will be locked during evaluation.
-func (n *Node) SelectBestMove() (move Move, moveValue float64, depth int) {
-	// TODO - A réecrire pour les cas ou les children ne sont pas tous développés ?
-	move = Move{}
+// return index of -1 if no legal move available (value will reflect stalemate or draw).
+// if no children were analysed, will not suggest a "best move" and return -1.
+// It is garanteed that n.children[best] is a non nil node if indx >= 0.
+func (n *Node) SelectBestMove() (indx int, moveValue float64, depth int) {
+
+	indx = -1
 	moveValue = WORSTVALUE
 	depth = 0
 
 	// Envision all legal moves
-	for i, c := range n.children {
+	for i := range n.Moves {
+		c := n.children[i]
 		if c == nil {
 			continue
 		}
 		v, d := c.Eval()
 		if -v > moveValue {
 			moveValue = -v
-			move = c.Moves[i]
+			indx = i
 			depth = d
 		}
 	}
-	return move, moveValue, depth // best Move and its value/depth
+	return indx, moveValue, depth // best Move and its value/depth
 }
 
-// Grow a certain number of layers
-func (n *Node) Grow(depth int) {
-
-	// TODO - A réecrire pour "rajouter" une layer de l'epaisseur donnée au bout de l'arbre et ne pas seulement contraidre la propfondeur de l'arbre ?
-	// TODO - ou une fonction Expand qui fait ça 1 fois, et que l'on itérer ?
-	if depth <= 0 {
-		return
-	}
-
+// Add exactly 1 layer to the tree
+func (n *Node) Expand() {
 	// expand children
 	for i, m := range n.Moves {
 		if n.children[i] == nil {
 			// create children if it does not exists
-			nc := NewNode(n.P.Clone())
-			nc.P.ExecuteMove(m)
-			n.children[i] = nc
+			p2 := n.P.Clone()
+			p2.ExecuteMove(m) // turn has changed ...
+			n.children[i] = NewNode(p2)
+			// no recursion here
+		} else {
+			// expand the children recursively
+			n.children[i].Expand()
 		}
-		// grow the children
-		n.children[i].Grow(depth - 1)
 	}
+}
+
+// Explore the best branch, and expand its leave.
+func (n *Node) ExpandBest() {
+	b := n.findBestLeave()
+	b.Expand()
+}
+
+func (n *Node) ExpandBestN(count int) {
+	n.ExpandBest()
+	if count > 1 {
+		n.ExpandBestN(count - 1)
+	}
+}
+
+// could be this n, if no further information
+func (n *Node) findBestLeave() *Node {
+	indx, _, _ := n.SelectBestMove()
+	if indx == -1 {
+		return n
+	}
+	return n.children[indx].findBestLeave()
 }

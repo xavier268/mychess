@@ -232,7 +232,7 @@ func whitePawnMoves(pos *Position, sq Square, moves []Move) []Move {
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}
-	// ove two square up
+	// move two square up
 	if i == 1 && pos.Board[i+1][j] == EMPTY && pos.Board[i+2][j] == EMPTY {
 		m = Move{Piece: piece, From: sq, To: Square{i + 2, j}}
 		moves = append(moves, m)
@@ -245,6 +245,7 @@ func whitePawnMoves(pos *Position, sq Square, moves []Move) []Move {
 	}
 	// capture right, including en passant
 	if i+1 < 8 && j+1 < 8 && (pos.Board[i+1][j+1] < 0 || pos.EnPassant == Square{i + 1, j + 1}) {
+		m = Move{Piece: piece, From: sq, To: Square{i + 1, j + 1}}
 		moves = append(moves, m)
 		moves = promoteLastMove(pos.Turn, moves)
 	}

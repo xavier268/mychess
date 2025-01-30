@@ -1,12 +1,11 @@
 package eval
 
-// Play the move, destroy n other child, return the new root node or nil if move is invalid.
+// Play the move, based on its index, destroy n other child, return the new root node or nil if move is invalid.
 // n itself is not automatically destroyed (will be garbage collected later).
-func (n *Node) Play(m Move) (n2 *Node) {
-	for i, mi := range n.Moves {
-		if mi == m {
-			return n.children[i]
-		}
+func (n *Node) Play(mi int) (n2 *Node) {
+
+	if mi >= 0 && mi < len(n.Moves) {
+		return n.children[mi]
 	}
 	return nil
 }
@@ -14,7 +13,7 @@ func (n *Node) Play(m Move) (n2 *Node) {
 // Plays the best possible move.
 // return nil if no move available.
 func (n *Node) PlayBest() (n2 *Node, value float64, depth int) {
-	m, value, depth := n.SelectBestMove()
-	n2 = n.Play(m)
+	mi, value, depth := n.SelectBestMove()
+	n2 = n.Play(mi)
 	return n2, value, depth
 }

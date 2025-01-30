@@ -237,6 +237,7 @@ func (p *Position) CopyFrom(p2 *Position) {
 }
 
 // Execute move on current position. No cloning, no allocation.
+// Turn changes.
 func (pos *Position) ExecuteMove(m Move) {
 
 	pos.Board[m.To.Row][m.To.Col] = m.Piece
