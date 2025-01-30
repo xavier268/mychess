@@ -23,6 +23,28 @@ func basicEval(p *Position) float64 {
 			v += pieceValue(p.Board[i][j])
 		}
 	}
+
+	// Renforcement du centre
+	v += 0.1 * float64(p.Board[3][3])
+	v += 0.1 * float64(p.Board[3][4])
+	v += 0.1 * float64(p.Board[4][3])
+	v += 0.1 * float64(p.Board[4][4])
+
+	// renforcement du centre étendu
+	v += 0.05 * float64(p.Board[2][2])
+	v += 0.05 * float64(p.Board[2][3])
+	v += 0.05 * float64(p.Board[2][4])
+	v += 0.05 * float64(p.Board[2][5])
+	v += 0.05 * float64(p.Board[3][2])
+	v += 0.05 * float64(p.Board[3][5])
+	v += 0.05 * float64(p.Board[4][2])
+	v += 0.05 * float64(p.Board[4][5])
+	v += 0.05 * float64(p.Board[5][2])
+	v += 0.05 * float64(p.Board[5][3])
+	v += 0.05 * float64(p.Board[5][4])
+	v += 0.05 * float64(p.Board[5][5])
+
+	// castling
 	if p.CanWhiteCastleKingSide {
 		v += 0.5
 	}
@@ -35,6 +57,8 @@ func basicEval(p *Position) float64 {
 	if p.CanBlackCastleQueenSide {
 		v -= 0.5
 	}
+
+	// alea
 	v += 0.0001 * (rand.Float64() - 0.5)
 	return v * float64(p.Turn)
 }

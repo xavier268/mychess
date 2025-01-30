@@ -8,11 +8,15 @@ import (
 
 func main() {
 	PLAYER := position.WHITE
+	fmt.Println("Choisissez votre camp : (1 : WHITE, -1 : BLACK)")
+	fmt.Scan(&PLAYER)
+	if PLAYER != 1 {
+		PLAYER = -1
+	}
 	fmt.Println("Vous jouez", position.StringColor(PLAYER))
 	fmt.Println("Préparation ...")
 
 	root := eval.NewNode(position.NewPosition().Reset())
-	root.Expand()
 	root.Expand()
 	root.Expand()
 	root.ExpandBestN(10)
@@ -21,17 +25,19 @@ func main() {
 
 	for {
 		root.Expand()
-		root.ExpandBest()
 		var mi int
-		if root.P.Turn == PLAYER {
+		if root.P.Turn == PLAYER { // human
 			fmt.Println("Choisissez votre mouvement :")
 			for i, m := range root.Moves {
 				fmt.Println(i, m.String())
 			}
-			// human
-			fmt.Scan(&mi)
-		} else {
-			// ordi
+
+			for fmt.Scan(&mi); mi < 0 || mi >= len(root.Moves); fmt.Scan(&mi) {
+				fmt.Println("Choix invalide. Réssayez ...")
+			}
+
+		} else { // ordi
+			root.ExpandBestN(6)
 			mi, _, _ = root.SelectBestMove()
 		}
 
@@ -44,6 +50,7 @@ func main() {
 		}
 
 		root = n2
+		// runtime.GC()
 
 		fmt.Println(root.P.String())
 		if root.P.Turn == PLAYER {
