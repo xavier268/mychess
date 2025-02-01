@@ -33,6 +33,13 @@ const ( // Black pieces are negative values of white pieces
 )
 const BLACK = -WHITE
 
+const (
+	reset    = "\033[0m"
+	bgWhite  = "\033[47m"
+	bgGreen  = "\033[42m" // green
+	txtBlack = "\033[30m"
+)
+
 // A move. When king moves two squares, it is castling.
 // When a pawn moves two squares, it can be captured en passant
 type Move struct {
@@ -143,7 +150,7 @@ func (p *Position) Reset() *Position {
 	return p
 }
 
-var DISPLAY = map[int8]string{
+var displayMap = map[int8]string{
 	// // White is hollow, black is full
 	// -PAWN: "♟", PAWN: "♙",
 	// -KNIGHT: "♞", KNIGHT: "♘",
@@ -162,7 +169,7 @@ var DISPLAY = map[int8]string{
 }
 
 func DisplayPiece(piece int8) string {
-	return DISPLAY[piece]
+	return displayMap[piece]
 }
 
 // Display position as a string.
@@ -171,24 +178,19 @@ func (p *Position) String() string {
 
 	// Display board
 	const ll = "   a  b  c  d  e  f  g  h\n"
-	const (
-		reset   = "\033[0m"
-		bgWhite = "\033[47m"
-		bgGray  = "\033[100m"
-	)
 
 	var buf strings.Builder
 	fmt.Fprintln(&buf, reset)
 	fmt.Fprintf(&buf, "%s", ll)
 	for i := 7; i >= 0; i-- {
-		fmt.Fprintf(&buf, "%s %1d", reset, i+1)
+		fmt.Fprintf(&buf, "%s%s %1d", reset, txtBlack, i+1)
 		for j := 0; j < 8; j++ {
 			if (i+j)%2 != 0 {
 				fmt.Fprint(&buf, bgWhite)
 			} else {
-				fmt.Fprint(&buf, bgGray)
+				fmt.Fprint(&buf, bgGreen)
 			}
-			fmt.Fprintf(&buf, " %s ", DISPLAY[p.Board[i][j]])
+			fmt.Fprintf(&buf, " %s ", displayMap[p.Board[i][j]])
 		}
 		fmt.Fprintf(&buf, "%s %d\n", reset, i+1)
 	}
@@ -204,7 +206,7 @@ func (m *Move) String() string {
 	} else {
 		color = "Black"
 	}
-	return fmt.Sprintf("%s %s  %s-%s", color, DISPLAY[m.Piece], m.From.String(), m.To.String())
+	return fmt.Sprintf("%s %s  %s-%s", color, displayMap[m.Piece], m.From.String(), m.To.String())
 }
 
 // Display square as a string.

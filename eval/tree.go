@@ -3,6 +3,7 @@ package eval
 
 import (
 	"mychess/position"
+	"runtime"
 )
 
 type (
@@ -97,7 +98,7 @@ func (n *Node) SelectBestMove() (indx int, moveValue float64, depth int) {
 	return indx, moveValue, depth // best Move and its value/depth
 }
 
-// Add exactly 1 layer to the tree
+// Add children to each leve of the tree, whatever their depth.
 func (n *Node) Expand() {
 	// expand children
 	for i, m := range n.Moves {
@@ -106,7 +107,7 @@ func (n *Node) Expand() {
 			p2 := n.P.Clone()
 			p2.ExecuteMove(m) // turn has changed ...
 			n.children[i] = NewNode(p2)
-			// no recursion here
+			// no recursion here !
 		} else {
 			// expand the children recursively
 			n.children[i].Expand()
@@ -114,7 +115,22 @@ func (n *Node) Expand() {
 	}
 }
 
+// Ensure current node has all its children set.
+func (n *Node) Expand0() {
+	// expand children
+	for i, m := range n.Moves {
+		if n.children[i] == nil {
+			// create children if it does not exists
+			p2 := n.P.Clone()
+			p2.ExecuteMove(m) // turn has changed ...
+			n.children[i] = NewNode(p2)
+			// no recursion here !
+		}
+	}
+}
+
 // Explore the best branch, and expand its leave.
+// Returns the last node expanded.
 func (n *Node) ExpandBest() *Node {
 	b := n.findBestLeave()
 	b.Expand()
@@ -128,11 +144,78 @@ func (n *Node) ExpandBestN(count int) {
 	}
 }
 
-// could be this n, if no further information
+// could be  n, if no further information (ie, n is a leaf)
 func (n *Node) findBestLeave() *Node {
 	indx, _, _ := n.SelectBestMove()
 	if indx == -1 {
 		return n
 	}
 	return n.children[indx].findBestLeave()
+}
+
+// Count nbr of nodes in tree
+func (n *Node) Count() int {
+	count := 1
+	for _, c := range n.children {
+		if c != nil {
+			count += c.Count()
+		}
+	}
+	return count
+}
+
+// A percenatge (between 0.0 and 1.0) reprensenting the occupied heap space.
+func HeapPercentage() float64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return float64(m.HeapAlloc) / float64(m.Sys)
+}
+
+// Expand, mixing select Best and expand0, until either context is done, or heapspace percentage reaches limit.
+// Error indicates why return occured.
+// Expansion has no other limit than heapspace and context.
+func (n *Node) ExpandBestLimit(lim *Limit) (err error) {
+	for err = lim.Check(); err == nil; err = lim.Check() {
+		n.ExpandBest()
+	}
+	return err
+}
+
+// Systematic expansion, using expand0,  breadth first (BFS), until limit is reached
+func (n *Node) ExpandBFSLimit(lim *Limit) (err error) {
+
+	var nn *Node
+
+	if err = lim.Check(); err != nil {
+		return err
+	}
+
+	// create a queue containing the nodes to process
+	queue := make([]*Node, 1, 40)
+	queue[0] = n
+
+	// loop until queue is empty ...
+	for len(queue) > 0 {
+		// verify limit
+		if err = lim.Check(); err != nil {
+			return err // done !
+		}
+
+		// pop a node
+		nn = queue[0]
+		queue = queue[1:]
+
+		// expand the node
+		nn.Expand0()
+
+		// verify limit
+		if err = lim.Check(); err != nil {
+			return err // done !
+		}
+
+		// add the children to the queue
+		queue = append(queue, nn.children...)
+
+	}
+	return err
 }

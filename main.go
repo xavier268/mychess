@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mychess/eval"
 	"mychess/position"
+	"runtime"
 )
 
 func main() {
@@ -19,25 +20,27 @@ func main() {
 	root := eval.NewNode(position.NewPosition().Reset())
 	root.Expand()
 	root.Expand()
-	root.ExpandBestN(6)
+	fmt.Println(root.ExpandBFSLimit(eval.NewDefaultLimit()))
 
 	fmt.Println(root.P.String())
 
 	for {
-		root.Expand()
+		root.Expand0()
 		var mi int
 		if root.P.Turn == PLAYER { // human
 			fmt.Println("Choisissez votre mouvement :")
 			for i, m := range root.Moves {
 				fmt.Println(i, m.String())
 			}
-
 			for fmt.Scan(&mi); mi < 0 || mi >= len(root.Moves); fmt.Scan(&mi) {
 				fmt.Println("Choix invalide. Réssayez ...")
 			}
 
 		} else { // ordi
-			root.ExpandBestN(4)
+			runtime.GC()
+			fmt.Println(root.ExpandBFSLimit(eval.NewDefaultLimit()))
+			runtime.GC()
+			fmt.Println(root.ExpandBestLimit(eval.NewDefaultLimit()))
 			mi, _, _ = root.SelectBestMove()
 		}
 
@@ -55,7 +58,7 @@ func main() {
 		fmt.Println(root.P.String())
 		if root.P.Turn == PLAYER {
 			v, depth := root.Eval()
-			fmt.Printf("Value of position : %f/%d\n", v, depth)
+			fmt.Printf("Value of position : %f (depth :%d, evaluations : %d)\n", v, depth, root.Count())
 		}
 	}
 }

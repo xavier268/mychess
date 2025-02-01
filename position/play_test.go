@@ -28,7 +28,7 @@ func TestPlayRandomGame(t *testing.T) {
 		m := mm[rd.Intn(len(mm))]
 		fmt.Printf("Playing %s\n", m.String())
 		if piece := p.Board[m.To.Row][m.To.Col]; piece != EMPTY {
-			fmt.Println("Capture", StringColor(piece), DISPLAY[piece])
+			fmt.Println("Capture", StringColor(piece), displayMap[piece])
 		}
 		p.ExecuteMove(m)
 		if p.IsCheck(p.Turn) {
