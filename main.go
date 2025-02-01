@@ -7,9 +7,13 @@ import (
 	"runtime"
 )
 
-var HINT = true // should we display hint ?
+const VERSION = "0.1.1"
+
+var HINT = true    // should we display hint ?
+var VERBOSE = true // should we display statistics ?
 
 func main() {
+	fmt.Println("Mychess Version ", VERSION)
 	PLAYER := position.WHITE
 	fmt.Println("Choisissez votre camp : (1 : WHITE, -1 : BLACK)")
 	fmt.Scan(&PLAYER)
@@ -34,6 +38,15 @@ func main() {
 		var mi, md int
 		var mv float64
 		if root.P.Turn == PLAYER { // human
+			if len(root.Moves) == 0 {
+				fmt.Println("Game over !")
+				if root.P.IsCheck(PLAYER) {
+					fmt.Println("Checkmate - You lost !")
+				} else {
+					fmt.Println("Pat !")
+				}
+				break
+			}
 			if HINT {
 				mi, mv, md = root.SelectBestMove()
 			}
@@ -65,6 +78,11 @@ func main() {
 		n2 := root.Play(mi)
 		if n2 == nil {
 			fmt.Println("Game finished !")
+			if root.P.IsCheck(-PLAYER) {
+				fmt.Println("Checkmate - you won !")
+			} else {
+				fmt.Println("Pat !")
+			}
 			break
 		}
 

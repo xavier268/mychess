@@ -2,6 +2,7 @@ package eval
 
 // Play the move, based on its index, destroy n other child, return the new root node or nil if move is invalid.
 // n itself is not automatically destroyed (will be garbage collected later).
+// Retun nil if no more moves.
 func (n *Node) Play(mi int) (n2 *Node) {
 
 	if mi >= 0 && mi < len(n.Moves) {
