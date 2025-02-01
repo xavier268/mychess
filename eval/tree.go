@@ -3,7 +3,6 @@ package eval
 
 import (
 	"mychess/position"
-	"runtime"
 )
 
 type (
@@ -164,13 +163,6 @@ func (n *Node) Count() int {
 	return count
 }
 
-// A percenatge (between 0.0 and 1.0) reprensenting the occupied heap space.
-func HeapPercentage() float64 {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	return float64(m.HeapAlloc) / float64(m.Sys)
-}
-
 // Expand, mixing select Best and expand0, until either context is done, or heapspace percentage reaches limit.
 // Error indicates why return occured.
 // Expansion has no other limit than heapspace and context.
@@ -191,7 +183,7 @@ func (n *Node) ExpandBFSLimit(lim *Limit) (err error) {
 	}
 
 	// create a queue containing the nodes to process
-	queue := make([]*Node, 1, 40)
+	queue := make([]*Node, 1, 400)
 	queue[0] = n
 
 	// loop until queue is empty ...

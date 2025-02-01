@@ -7,10 +7,13 @@ import (
 	"runtime"
 )
 
+var HINT = true // should we display hint ?
+
 func main() {
 	PLAYER := position.WHITE
 	fmt.Println("Choisissez votre camp : (1 : WHITE, -1 : BLACK)")
 	fmt.Scan(&PLAYER)
+	fmt.Println("HeapValue", eval.HeapValue()/1000000, "Mo")
 	if PLAYER != 1 {
 		PLAYER = -1
 	}
@@ -20,17 +23,28 @@ func main() {
 	root := eval.NewNode(position.NewPosition().Reset())
 	root.Expand()
 	root.Expand()
+	fmt.Println("HeapValue", eval.HeapValue()/1000000, "Mo")
 	fmt.Println(root.ExpandBFSLimit(eval.NewDefaultLimit()))
+	fmt.Println("HeapValue", eval.HeapValue()/1000000, "Mo")
 
 	fmt.Println(root.P.String())
 
 	for {
-		root.Expand0()
-		var mi int
+		root.Expand0() // required to compensate depth loss from node selection
+		var mi, md int
+		var mv float64
 		if root.P.Turn == PLAYER { // human
+			if HINT {
+				mi, mv, md = root.SelectBestMove()
+			}
 			fmt.Println("Choisissez votre mouvement :")
 			for i, m := range root.Moves {
-				fmt.Println(i, m.String())
+				fmt.Printf("%2d  %s ", i, m.String())
+				if HINT && i == mi {
+					fmt.Printf("<=== (Recommanded : value=%f, depth=%d)\n", mv, md)
+				} else {
+					fmt.Println()
+				}
 			}
 			for fmt.Scan(&mi); mi < 0 || mi >= len(root.Moves); fmt.Scan(&mi) {
 				fmt.Println("Choix invalide. Réssayez ...")
@@ -39,8 +53,10 @@ func main() {
 		} else { // ordi
 			runtime.GC()
 			fmt.Println(root.ExpandBFSLimit(eval.NewDefaultLimit()))
+			fmt.Println("HeapValue", eval.HeapValue()/1000000, "Mo")
 			runtime.GC()
 			fmt.Println(root.ExpandBestLimit(eval.NewDefaultLimit()))
+			fmt.Println("HeapValue", eval.HeapValue()/1000000, "Mo")
 			mi, _, _ = root.SelectBestMove()
 		}
 
