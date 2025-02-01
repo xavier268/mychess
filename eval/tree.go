@@ -132,7 +132,7 @@ func (n *Node) Expand0() {
 // Returns the last node expanded.
 func (n *Node) ExpandBest() *Node {
 	b := n.findBestLeave()
-	b.Expand()
+	b.Expand0()
 	return b
 }
 
@@ -168,7 +168,9 @@ func (n *Node) Count() int {
 // Expansion has no other limit than heapspace and context.
 func (n *Node) ExpandBestLimit(lim *Limit) (err error) {
 	for err = lim.Check(); err == nil; err = lim.Check() {
-		n.ExpandBest()
+		if n == n.ExpandBest() {
+			return nil // cannot expand further - already stalemate !
+		}
 	}
 	return err
 }
