@@ -46,16 +46,16 @@ func basicEval(p *Position) float64 {
 
 	// castling
 	if p.CanWhiteCastleKingSide {
-		v += 0.5
+		v += 0.4
 	}
 	if p.CanWhiteCastleQueenSide {
-		v += 0.5
+		v += 0.4
 	}
 	if p.CanBlackCastleKingSide {
-		v -= 0.5
+		v -= 0.4
 	}
 	if p.CanBlackCastleQueenSide {
-		v -= 0.5
+		v -= 0.4
 	}
 
 	// alea

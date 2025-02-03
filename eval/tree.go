@@ -42,7 +42,7 @@ func NewNode(p *Position) *Node {
 	n.children = make([]*Node, len(n.Moves))
 	// Set initial node value without looking at children ...
 	if len(n.Moves) != 0 { // normal game continue ...
-		n.value = basicEval(p)
+		n.value = basicEval(p) + float64(len(n.Moves))*0.001 // add the number of moves as a indicator of a good move ?
 		return n
 	} else { // verify stalemate or draw ?
 		if p.IsCheck(p.Turn) {

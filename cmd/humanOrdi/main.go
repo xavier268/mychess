@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
+	"mychess"
 	"mychess/eval"
 	"mychess/position"
 	"runtime"
 )
 
-const VERSION = "0.1.1"
-
 var HINT = true    // should we display hint ?
 var VERBOSE = true // should we display statistics ?
 
 func main() {
-	fmt.Println("Mychess Version ", VERSION)
+	fmt.Println("Mychess Version ", mychess.VERSION)
 	PLAYER := position.WHITE
 	fmt.Println("Choisissez votre camp : (1 : WHITE, -1 : BLACK)")
 	fmt.Scan(&PLAYER)
