@@ -8,22 +8,24 @@ import (
 )
 
 // brute force the magic nbr corresponding the provided map
-func DoMagic(mm map[uint64]uint64) uint64 {
+// returns the magic number and the slice, from the index (generated with magic number) to the value
+func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
-	keys := make([]uint64, 0, len(mm))
-	for k := range mm {
-		keys = append(keys, k)
+	vals := make(map[uint64]bool, len(mm))
+	for v := range mm {
+		vals[v] = true
 	}
-	m2 := make(map[uint64]int, len(mm)) // map the target values to the index
+
+	m2 := make(map[uint64]uint64, len(mm)) // map the target values to the index
 
 	NbFrom := len(mm)
-	NbTo := len(keys)
-	NbBits := uint64(math.Ceil(math.Log2(float64(NbTo))))
-	fmt.Printf("Trying to compress a map from %d values to %d values (%d bit index for values)\n", NbFrom, NbTo, NbBits)
+	NbTo := len(vals)
+	NbBits = int(math.Ceil(math.Log2(float64(NbTo))))
+	fmt.Printf("Trying to compress a map from %d input values to %d output values (%d bit index for values)\n", NbFrom, NbTo, NbBits)
 
-	for i := rand.Uint64(); true; {
-		fmt.Printf(".")
-		magic := i
+	for {
+
+		magic := rand.Uint64()
 		// clear m2 map
 		for k := range m2 {
 			delete(m2, k)
@@ -33,14 +35,26 @@ func DoMagic(mm map[uint64]uint64) uint64 {
 		for k, v := range mm {
 			idx := (magic * k) >> (64 - NbBits)
 			if _, ok := m2[v]; !ok { // this value had no index yet
-				m2[v] = idx			
+				m2[v] = idx
 			} else { // this value already had an index - is it the same ?
-				if m2[v] != idx {
-					break
+				if m2[v] != idx { // magic number is invalid !
+					magic = 0
+					break // abort loop
 				}
 			}
-		
-
+		}
+		// here, test succeeded if magic != 0
+		if magic != 0 {
+			values = make([]uint64, NbTo)
+			for val, idx := range m2 {
+				values[idx] = val
+			}
+			return magic, NbBits, values
+		}
 	}
+}
 
+// Apply computed magic nbr to input to generate output
+func ApplyMagic(magic uint64, NbBits int, values []uint64, input uint64) (output uint64) {
+	return values[(magic*input)>>(64-NbBits)]
 }
