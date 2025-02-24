@@ -22,10 +22,10 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 	// m2 maps output values to indexes
 	m2 := make(map[uint64]uint64, len(mm))
 
-	NbFrom := len(mm)
-	NbTo := len(vals)
-	NbBits = int(math.Ceil(math.Log2(float64(NbTo))))
-	fmt.Printf("Trying to compress a map from %d input values to %d output values (%d bit index for values)\n", NbFrom, NbTo, NbBits)
+	NbIn := len(mm)
+	NbOut := len(vals)
+	NbBits = int(math.Ceil(math.Log2(float64(NbOut))))
+	fmt.Printf("Trying to compress a map from %d input values to %d output values (%d bit index for values)\n", NbIn, NbOut, NbBits)
 
 	for {
 
