@@ -43,10 +43,10 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 			idx := (magic * inv) >> (64 - NbBits)
 			if idx2, ok := m2[outv]; !ok { // this value had no index yet
 				m2[outv] = idx
-				fmt.Println("  ", inv, "=>", idx, "-->", outv)
+				fmt.Printf("Setting index\n%d ->[%d]->%d\n", inv, idx, outv)
 			} else { // this value already had an index, idx2 - is it the same as the computed idx ?
 				if idx2 != idx { // magic number is invalid !
-					fmt.Println("Failed  : value", outv, "idx", idx, "idx2", idx2)
+					fmt.Printf("Cannot rest index\n%d ->[%d]->%d\nAbort\n", inv, idx, outv)
 					magic = 0
 					break // abort loop
 				}
