@@ -9,44 +9,43 @@ import (
 
 // brute force the magic nbr corresponding the provided map
 // returns the magic number and the slice, from the index (generated with magic number) to the value
-func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
+func DoMagic(inputOutputMap map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
-	// mm contains the initial map : input to output
-
-	// vals contains deduped output values
-	vals := make(map[uint64]bool, len(mm))
-	for _, v := range mm {
-		vals[v] = true
+	// dedupOutVals contains deduped output values
+	dedupOutVals := make(map[uint64]bool, len(inputOutputMap))
+	for _, v := range inputOutputMap {
+		dedupOutVals[v] = true
 	}
 
-	// m2 maps output values to indexes
-	m2 := make(map[uint64]uint64, len(mm))
+	const MAXUINT = 0xFFFFFFFFFFFFFFFF // sentinel value for out values
 
-	NbIn := len(mm)
-	NbOut := len(vals)
+	NbIn := len(inputOutputMap)
+	NbOut := len(dedupOutVals)
 	NbBits = int(math.Ceil(math.Log2(float64(NbOut))))
 	fmt.Printf("Trying to compress a map from %d input values to %d output values (%d bit index for values)\n", NbIn, NbOut, NbBits)
 
+	// slice of index to values -
+	values = make([]uint64, 1<<(NbBits))
 	for {
 
 		magic = rand.Uint64()
 		fmt.Println("Debug : trying ", magic)
 
-		// clear m2 map
-		for k := range m2 {
-			delete(m2, k)
+		// clear values
+		for k := range values {
+			values[k] = MAXUINT // sentinel value. This value is normally never found in real life.
 		}
 
-		// test magic ? // BUGGY !!
-		for inv, outv := range mm {
-			fmt.Println("   ", inv, "-->", outv)
+		// test magic ?
+		for inv, outv := range inputOutputMap {
+			//fmt.Println("Testing :", inv, "-->", outv)
 			idx := (magic * inv) >> (64 - NbBits)
-			if idx2, ok := m2[outv]; !ok { // this value had no index yet
-				m2[outv] = idx
-				fmt.Printf("Setting index\n%d ->[%d]->%d\n", inv, idx, outv)
+			if values[idx] == MAXUINT { // index not yet set to this value (excpt values[0] which is always set to 0)
+				values[idx] = outv
+				//fmt.Printf("Setting index\n%d ->[%d]->%d\n", inv, idx, outv)
 			} else { // this value already had an index, idx2 - is it the same as the computed idx ?
-				if idx2 != idx { // magic number is invalid !
-					fmt.Printf("Cannot rest index\n%d ->[%d]->%d\nAbort\n", inv, idx, outv)
+				if values[idx] != outv {
+					//fmt.Printf("conflicting values for index :[%d]->%d  and %d\nabort\n", idx, outv, values[idx])
 					magic = 0
 					break // abort loop
 				}
@@ -57,12 +56,9 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 			continue
 		}
 		// here, magic should be valid
-		fmt.Printf("Found valid magic : %d\n", magic)
-		values = make([]uint64, 1<<(NbBits))
-		for outv := range vals { // loop over deduplicated out values
-			values[m2[outv]] = outv
-			return magic, NbBits, values
-		}
+		fmt.Printf("Found valid magic : %d\noutputToIndexMap%v\n", magic, values)
+		return magic, NbBits, values
+
 	}
 }
 

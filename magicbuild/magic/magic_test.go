@@ -6,6 +6,9 @@ import (
 )
 
 var testMap = map[uint64]uint64{
+	// 0: 170,
+	1:  90,
+	2:  170,
 	3:  90,
 	4:  90,
 	5:  170,
