@@ -11,13 +11,16 @@ import (
 // returns the magic number and the slice, from the index (generated with magic number) to the value
 func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
-	// Dedup output values
+	// mm contains the initial map : input to output
+
+	// vals contains deduped output values
 	vals := make(map[uint64]bool, len(mm))
 	for _, v := range mm {
 		vals[v] = true
 	}
 
-	m2 := make(map[uint64]uint64, len(mm)) // map the target values to the index pointing to that value
+	// m2 maps output values to indexes
+	m2 := make(map[uint64]uint64, len(mm))
 
 	NbFrom := len(mm)
 	NbTo := len(vals)
@@ -26,31 +29,34 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
 	for {
 
-		magic := rand.Uint64()
+		magic = rand.Uint64()
+
 		// clear m2 map
 		for k := range m2 {
 			delete(m2, k)
 		}
 
 		// test magic ?
-		for k, v := range mm {
-			idx := (magic * k) >> (64 - NbBits)
-			if _, ok := m2[v]; !ok { // this value had no index yet
-				m2[v] = idx
+		for inv, outv := range mm {
+			idx := (magic * inv) >> (64 - NbBits)
+			if idx2, ok := m2[outv]; !ok { // this value had no index yet
+				m2[outv] = idx
 			} else { // this value already had an index - is it the same ?
-				if m2[v] != idx { // magic number is invalid !
+				if idx2 != idx { // magic number is invalid !
 					magic = 0
 					break // abort loop
 				}
 			}
 		}
-		// here, test succeeded if magic != 0
-		if magic != 0 {
-			fmt.Printf("Found valid magic : %d\n", magic)
-			values = make([]uint64, 1<<NbTo)
-			for val, idx := range m2 {
-				values[idx] = val
-			}
+		//  if magic is invalid ? main loop !
+		if magic == 0 {
+			continue
+		}
+		// here, magic shouold be valid
+		fmt.Printf("Found valid magic : %d\n", magic)
+		values = make([]uint64, 1<<(NbTo-1))
+		for outv := range vals { // loop over deduplicated out values
+			values[m2[outv]] = outv
 			return magic, NbBits, values
 		}
 	}
