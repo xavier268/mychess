@@ -37,7 +37,7 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 			delete(m2, k)
 		}
 
-		// test magic ?
+		// test magic ? // BUGGY !!
 		for inv, outv := range mm {
 			fmt.Println("   ", inv, "-->", outv)
 			idx := (magic * inv) >> (64 - NbBits)
