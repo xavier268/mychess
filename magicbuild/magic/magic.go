@@ -11,12 +11,13 @@ import (
 // returns the magic number and the slice, from the index (generated with magic number) to the value
 func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
+	// Dedup output values
 	vals := make(map[uint64]bool, len(mm))
-	for v := range mm {
+	for _, v := range mm {
 		vals[v] = true
 	}
 
-	m2 := make(map[uint64]uint64, len(mm)) // map the target values to the index
+	m2 := make(map[uint64]uint64, len(mm)) // map the target values to the index pointing to that value
 
 	NbFrom := len(mm)
 	NbTo := len(vals)
@@ -45,7 +46,8 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 		}
 		// here, test succeeded if magic != 0
 		if magic != 0 {
-			values = make([]uint64, NbTo)
+			fmt.Printf("Found valid magic : %d\n", magic)
+			values = make([]uint64, 1<<NbTo)
 			for val, idx := range m2 {
 				values[idx] = val
 			}

@@ -1,6 +1,9 @@
 package magic
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 var testMap = map[uint64]uint64{
 	2:  9,
@@ -16,6 +19,7 @@ var testMap = map[uint64]uint64{
 
 func TestMagic(t *testing.T) {
 	magic, nbbits, values := DoMagic(testMap)
+	fmt.Println("Values : ", values)
 	for k, v := range testMap {
 		if vv := ApplyMagic(magic, nbbits, values, k); vv != v {
 			t.Errorf("Expected %d, got %d", v, vv)
