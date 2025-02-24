@@ -30,6 +30,7 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 	for {
 
 		magic = rand.Uint64()
+		fmt.Println("Debug : trying ", magic)
 
 		// clear m2 map
 		for k := range m2 {
@@ -38,11 +39,14 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 
 		// test magic ?
 		for inv, outv := range mm {
+			fmt.Println("   ", inv, "-->", outv)
 			idx := (magic * inv) >> (64 - NbBits)
 			if idx2, ok := m2[outv]; !ok { // this value had no index yet
 				m2[outv] = idx
-			} else { // this value already had an index - is it the same ?
+				fmt.Println("  ", inv, "=>", idx, "-->", outv)
+			} else { // this value already had an index, idx2 - is it the same as the computed idx ?
 				if idx2 != idx { // magic number is invalid !
+					fmt.Println("Failed  : value", outv, "idx", idx, "idx2", idx2)
 					magic = 0
 					break // abort loop
 				}
@@ -52,9 +56,9 @@ func DoMagic(mm map[uint64]uint64) (magic uint64, NbBits int, values []uint64) {
 		if magic == 0 {
 			continue
 		}
-		// here, magic shouold be valid
+		// here, magic should be valid
 		fmt.Printf("Found valid magic : %d\n", magic)
-		values = make([]uint64, 1<<(NbTo-1))
+		values = make([]uint64, 1<<(NbBits))
 		for outv := range vals { // loop over deduplicated out values
 			values[m2[outv]] = outv
 			return magic, NbBits, values
