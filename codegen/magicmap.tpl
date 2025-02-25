@@ -1,0 +1,126 @@
+package position
+
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+
+// ====================================================
+// {{.IN}} bits -> {{.OUT}} bits
+// ====================================================
+
+func NewMagicMap_{{.IN}}_{{.OUT}}() MagicMap {
+	mm := new(magicMap_{{.IN}}_{{.OUT}})
+	return mm
+}
+
+type magicMap_{{.IN}}_{{.OUT}} struct { // capa is 4096 in/64 out
+	keys   [1<<{{.IN}}]uint64 // keyindex ->  input keys
+	index  [1<<{{.IN}}]uint8  // keyindex -> valueindex ( NOTE : assumes index < 256 for up to 256 distict output values per magicmap).
+	values [1<<{{.OUT}}]uint64  // valueindex -> output values
+	nbin   uint16        // nb of keys registered
+	nbout  uint8         // nb of keys and values registered
+}
+
+// Get implements MagicMap.
+func (mm magicMap_{{.IN}}_{{.OUT}}) Get(key uint64) (value uint64) {
+	const maxin = 1 << {{.IN}}
+	if key == 0 {
+		return 0
+	}
+	// look for key, linear search if collision, return 0 if not found
+	keyindex := (maxin - 1) & hash16(key)
+	for {
+		if mm.keys[keyindex] == 0 {
+			return 0 // not found
+		}
+		if mm.keys[keyindex] == key {
+			return mm.values[mm.index[keyindex]]
+		}
+		keyindex = (keyindex + 1) & (maxin - 1)
+	}
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) Size() (bytes int) {
+	return int(unsafe.Sizeof((mm)))
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) Count() (in, out int) {
+	return int(mm.nbin), int(mm.nbout)
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) Capa() (in, out int) {
+	return 1<<{{.IN}}, 1 << {{.OUT}}
+}
+
+func (mm *magicMap_{{.IN}}_{{.OUT}}) Set(key, value uint64) {
+	const maxin = 1 << {{.IN}}
+	const maxout = 1 << {{.OUT}}
+
+	// check remaining capacity
+	if mm.nbout == maxout {
+		panic("trying to set a new value beyond value capacity")
+	}
+	if mm.nbin == maxin {
+		panic("trying to set a new key beyond key capacity")
+	}
+	if key == 0 {
+		panic("key cannot be 0")
+	}
+	// look for value if it exists
+	var valueindex uint8
+	found := false
+	for valueindex = 0; valueindex < mm.nbout; valueindex++ {
+		if mm.values[valueindex] == value {
+			found = true
+			break
+		}
+	}
+	// value was not previously known, lets register it.
+	if !found {
+		valueindex = uint8(mm.nbout)
+		mm.values[mm.nbout] = value
+		mm.nbout++
+	}
+	fmt.Printf("DEBUG : registerd value %d with valueindex %d\n", value, valueindex)
+	// OK, now we have the index for the value in valueIndex.
+
+	// look for key, linear search until empty slot found
+	keyindex := (maxin - 1) & hash16(key)
+	for i := 0; i < (maxin); i = (i + 1) & (maxin - 1) { // never more than 2^12 tries
+		if mm.keys[keyindex] == 0 {
+			mm.keys[keyindex] = key
+			mm.index[keyindex] = valueindex
+			mm.nbin++
+			return
+		}
+	}
+	panic("internal logic error")
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) AllKeys() []uint64 {
+	keys := make([]uint64, 0, mm.nbin)
+	for _, k := range mm.keys {
+		if k != 0 {
+			keys = append(keys, k)
+		}
+	}
+	return keys
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) AllValues() (values []uint64) {
+	return append(values, mm.values[:mm.nbout]...)
+}
+
+func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
+	maxin, maxout := mm.Capa()
+	nbin, nbout := mm.Count()
+	size := mm.Size()
+	fmt.Printf("MagicMap : %d/%d keys, %d/%d values (memory used : %d bytes)\n", nbin, maxin, nbout, maxout, size)
+	for i, k := range mm.AllKeys() {
+		v := mm.Get(k)
+		fmt.Printf("%05d :   %016X (%20d) -> %016X (%20d)\n", i, k, k, v, v)
+	}
+}
