@@ -17,18 +17,20 @@ func NewMagicMap_{{.IN}}_{{.OUT}}() MagicMap {
 }
 
 type magicMap_{{.IN}}_{{.OUT}} struct { // capa is 4096 in/64 out
+	zerovalue uint64           // value for the '0' key
 	keys   [1<<{{.IN}}]uint64 // keyindex ->  input keys
 	index  [1<<{{.IN}}]uint8  // keyindex -> valueindex ( NOTE : assumes index < 256 for up to 256 distict output values per magicmap).
 	values [1<<{{.OUT}}]uint64  // valueindex -> output values
-	nbin   uint16        // nb of keys registered
-	nbout  uint8         // nb of keys and values registered
+	nbin   uint16        // nb of keys registered, not counting 0
+	nbout  uint8         // nb of keys and values registered, not counting 0
 }
 
 // Get implements MagicMap.
 func (mm magicMap_{{.IN}}_{{.OUT}}) Get(key uint64) (value uint64) {
+
 	const maxin = 1 << {{.IN}}
 	if key == 0 {
-		return 0
+		return mm.zerovalue
 	}
 	// look for key, linear search if collision, return 0 if not found
 	keyindex := (maxin - 1) & hash16(key)
@@ -59,8 +61,13 @@ func (mm *magicMap_{{.IN}}_{{.OUT}}) Set(key, value uint64) {
 	const maxin = 1 << {{.IN}}
 	const maxout = 1 << {{.OUT}}
 
+	if key == 0 {
+		mm.zerovalue = value
+		return
+	}
+
 	// check remaining capacity
-	if mm.nbout == maxout {
+	if mm.nbout == maxout-1 {
 		panic("trying to set a new value beyond value capacity")
 	}
 	if mm.nbin == maxin {
