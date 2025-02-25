@@ -121,11 +121,13 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) AllValues() (values []uint64) {
 	return append(values, mm.values[:mm.nbout]...)
 }
 
+
 func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
 	maxin, maxout := mm.Capa()
 	nbin, nbout := mm.Count()
 	size := mm.Size()
 	fmt.Printf("MagicMap : %d/%d keys, %d/%d values (memory used : %d bytes)\n", nbin, maxin, nbout, maxout, size)
+	fmt.Printf("0-key :   %016X (%20d) -> %016X (%20d)\n",  0,0, mm.zerovalue, mm.zerovalue)	
 	for i, k := range mm.AllKeys() {
 		v := mm.Get(k)
 		fmt.Printf("%05d :   %016X (%20d) -> %016X (%20d)\n", i, k, k, v, v)

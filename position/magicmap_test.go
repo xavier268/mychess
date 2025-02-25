@@ -13,6 +13,7 @@ var testmap = map[uint64]uint64{
 	45:  999,
 	47:  333,
 	49:  333,
+	0:   888,
 }
 
 func TestMagicMapDump(t *testing.T) {
@@ -32,17 +33,14 @@ func TestMagicMapDump(t *testing.T) {
 			t.Errorf("Error: %d != %d", mm.Get(k), v)
 		}
 	}
-	if mm.Get(0) != 0 {
-		t.Errorf("Error: %d != %d", mm.Get(0), 0)
-	}
 	if mm.Get(1) != 0 {
 		t.Errorf("Error: %d != %d", mm.Get(1), 0)
 	}
 	nbi, nbo := mm.Count()
-	if nbi != 7 {
+	if nbi != 7 { // 0 is never counted as a key
 		t.Errorf("Error: %d != %d", nbi, 7)
 	}
-	if nbo != 4 {
+	if nbo != 4 { // the value for the zero key is not counted
 		t.Errorf("Error: %d != %d", nbo, 4)
 	}
 
