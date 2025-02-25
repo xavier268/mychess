@@ -25,9 +25,10 @@ type MagicMap interface {
 	Dump()                 // dump key -> values - testing only
 }
 
+const magic uint64 = 11400714819323198485
+
 // 16 bits hash function optimized for speed
 func hash16(key uint64) uint16 {
-	const magic = 11400714819323198485
 	return uint16((key * magic) >> 24) // middle bits have the most entropy
 }
 
