@@ -50,21 +50,21 @@ func (s Square) IsValid() bool {
 //=======================================================
 
 // A 64-bit bitmap
-type BitBoard uint64
+type Bitboard uint64
 
-func (b BitBoard) IsSet(pos Square) bool {
+func (b Bitboard) IsSet(pos Square) bool {
 	return b&(1<<pos) != 0
 }
 
-func (b *BitBoard) Set(pos Square) {
+func (b *Bitboard) Set(pos Square) {
 	*b |= 1 << pos
 }
 
-func (b *BitBoard) Unset(pos Square) {
+func (b *Bitboard) Unset(pos Square) {
 	*b &= ^(1 << pos)
 }
 
-func (b BitBoard) String() string {
+func (b Bitboard) String() string {
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "\n   ")
 	for i := 0; i < 8; i++ {
@@ -91,6 +91,6 @@ func (b BitBoard) String() string {
 
 }
 
-func (b BitBoard) Display() {
+func (b Bitboard) Display() {
 	fmt.Printf("Bitboard : %016X\n%s\n", uint64(b), b.String())
 }
