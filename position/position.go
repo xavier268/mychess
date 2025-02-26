@@ -32,23 +32,28 @@ type Position struct {
 	// king positions derived from status data below
 
 	// Detail per bit number :
-	// 0-5 : counter of moves without capture and without pawn move (0-63)
-	// 6 : who should play ?
-	// 7 : reserved
 	//
-	// 16-21 black king position (0-63)
-	// 22 : black can big castle
-	// 23 : black can small castle
+	// byte 0
+	// 0-6: white king position (0 / 63)
+	// 7  : white can castle queen side
+	// 8  : white can castle king side
 	//
-	// 24-29 white king position (0-63)
-	// 30 : white can big castle
-	// 31 : white can small castle
+	// byte 1
+	// 0-6: black king position (0-63)
+	// 7  : black can castle queen side
+	// 8 :  black can castle king side
 	//
-	// 40 : en passant active
-	// 41-43 : en passant file number (0-7)
+	// byte 2
+	// 0-6 : counter of ply without capture and without pawn move (0 / 127)
+	// 7   : if set, colors of the physical board have been reversed, to ensure WHITE is always expected to play in this position.
 	//
-	// 48 - 55 : reserved
+	// byte 3
+	// reserved - whose king is under attack ( mine or yours ? ), mat or draw, or game-over flags ?
 	//
-	// 56 - 63 : reserved
+	// byte 4 & 5 ( 0 / 65 535)
+	// uint16 representing total number of ply so far
+	//
+	// byte 6 & 7 (-32 000 / +32 000)
+	// int16 representing material value of the board ?
 	status uint64
 }
