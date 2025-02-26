@@ -13,6 +13,7 @@ import (
 
 func NewMagicMap_{{.IN}}_{{.OUT}}() MagicMap {
 	mm := new(magicMap_{{.IN}}_{{.OUT}})
+	mm.magic = defaultmagic
 	return mm
 }
 
@@ -23,6 +24,7 @@ type magicMap_{{.IN}}_{{.OUT}} struct { // capa is 4096 in/64 out
 	values [1<<{{.OUT}}]uint64  // valueindex -> output values
 	nbin   uint16        // nb of keys registered, not counting 0
 	nbout  uint8         // nb of keys and values registered, not counting 0
+	magic uint64
 }
 
 // Get implements MagicMap.
@@ -33,7 +35,7 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) Get(key uint64) (value uint64) {
 		return mm.zerovalue
 	}
 	// look for key, linear search if collision, return 0 if not found
-	keyindex := (maxin - 1) & hash16(key)
+	keyindex := mm.hash(key)
 	for {
 		if mm.keys[keyindex] == 0 {
 			return 0 // not found
@@ -95,7 +97,7 @@ func (mm *magicMap_{{.IN}}_{{.OUT}}) Set(key, value uint64) {
 	// OK, now we have the index for the value in valueIndex.
 
 	// look for key, linear search until empty slot found
-	keyindex := (maxin - 1) & hash16(key)
+	keyindex := mm.hash(key)
 	for i := 0; i < (maxin); i = (i + 1) & (maxin - 1) { // never more than 2^12 tries
 		if mm.keys[keyindex] == 0 {
 			mm.keys[keyindex] = key
@@ -132,4 +134,10 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
 		v := mm.Get(k)
 		fmt.Printf("%05d :   %016X (%20d) -> %016X (%20d)\n", i, k, k, v, v)
 	}
+}
+
+
+// 16 bits hash function optimized for speed
+func (mm magicMap_{{.IN}}_{{.OUT}})  hash(key uint64) uint16 {
+	return uint16((key * mm.magic) >> 24) & (1<<{{.IN}}-1) // middle bits have the most entropy
 }
