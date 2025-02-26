@@ -27,6 +27,14 @@ type magicMap_{{.IN}}_{{.OUT}} struct { // capa is 4096 in/64 out
 	magic uint64
 }
 
+func (mm *magicMap_{{.IN}}_{{.OUT}}) SetMagic(magic uint64) (MagicMap){
+	if magic == 0 {
+		panic("trying to set magic to 0 is illegal and useless")
+	}
+	mm.magic = magic
+	return mm
+}
+
 // Get implements MagicMap.
 func (mm magicMap_{{.IN}}_{{.OUT}}) Get(key uint64) (value uint64) {
 
