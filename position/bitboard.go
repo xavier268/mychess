@@ -15,12 +15,12 @@ type Square int
 // Rank/File coordinates of a given square
 // 0-based
 func (s Square) RF() (rank int, file int) {
-	return int(s) / 8, int(s) % 8
+	return int(s >> 3), int(s & 7)
 }
 
 // Create a square from the rank/file coordinates
 func Sq(rank, file int) Square {
-	return Square(rank*8 + file)
+	return Square(rank<<3 | file)
 }
 
 // create a square from the string expression, eg : "d2"
@@ -45,6 +45,22 @@ func (s Square) IsValid() bool {
 	return s >= 0 && s < 64
 }
 
+func (s Square) Rank() int {
+	return int(s >> 3)
+}
+
+func (s Square) File() int {
+	return int(s & 7)
+}
+
+func (s Square) VMirror() Square {
+	return s ^ 56
+}
+
+func (s Square) HMirror() Square {
+	return s ^ 7
+}
+
 // ======================================================
 // BitBoard object
 //=======================================================
@@ -60,10 +76,16 @@ func (b *Bitboard) Set(pos Square) {
 	*b |= 1 << pos
 }
 
+func (b Bitboard) Get(bit Square) int {
+	return int((b >> bit) & 1)
+}
+
 func (b *Bitboard) Unset(pos Square) {
 	*b &= ^(1 << pos)
 }
 
+// affiche un bitboard avec les rank/files
+// le rank 0 est en bas.
 func (b Bitboard) String() string {
 	sb := new(strings.Builder)
 	fmt.Fprintf(sb, "\n   ")
@@ -72,15 +94,15 @@ func (b Bitboard) String() string {
 	}
 	for i := Square(0); i < 64; i++ {
 		if i%8 == 0 {
-			fmt.Fprintf(sb, "\n%d  ", i/8+1)
+			fmt.Fprintf(sb, "\n%d  ", i.VMirror()/8+1)
 		}
-		if b.IsSet(i) {
+		if b.IsSet(i.VMirror()) {
 			sb.WriteString(" \u25CF ")
 		} else {
 			sb.WriteString(" . ")
 		}
 		if i%8 == 7 {
-			fmt.Fprintf(sb, "  %d", i/8+1)
+			fmt.Fprintf(sb, "  %d", i.VMirror()/8+1)
 		}
 	}
 	fmt.Fprintf(sb, "\n   ")
@@ -93,4 +115,32 @@ func (b Bitboard) String() string {
 
 func (b Bitboard) Display() {
 	fmt.Printf("Bitboard : %016X\n%s\n", uint64(b), b.String())
+}
+
+// ======================================================
+// Uint64 transformations
+//=======================================================
+
+// Vertical mirror - use to exchange white-black
+func (x Bitboard) VMirror() Bitboard {
+	const (
+		k1 Bitboard = 0x00FF00FF00FF00FF
+		k2 Bitboard = 0x0000FFFF0000FFFF
+	)
+	x = ((x >> 8) & k1) | ((x & k1) << 8)
+	x = ((x >> 16) & k2) | ((x & k2) << 16)
+	x = (x >> 32) | (x << 32)
+	return x
+}
+
+func (x Bitboard) HMirror() Bitboard {
+	const (
+		k1 Bitboard = 0x5555555555555555
+		k2 Bitboard = 0x3333333333333333
+		k4 Bitboard = 0x0F0F0F0F0F0F0F0F
+	)
+	x = ((x >> 1) & k1) | ((x & k1) << 1)
+	x = ((x >> 2) & k2) | ((x & k2) << 2)
+	x = ((x >> 4) & k4) | ((x & k4) << 4)
+	return x
 }
