@@ -99,7 +99,7 @@ func (mm *magicMap_{{.IN}}_{{.OUT}}) Set(key, value uint64) {
 		mm.values[mm.nbout] = value
 		mm.nbout++
 	}
-	fmt.Printf("DEBUG : registerd value %d with valueindex %d\n", value, valueindex)
+	// fmt.Printf("DEBUG : registerd value %d with valueindex %d\n", value, valueindex)
 	// OK, now we have the index for the value in valueIndex.
 
 	// look for key, linear search until empty slot found

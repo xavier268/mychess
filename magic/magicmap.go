@@ -4,6 +4,7 @@ package magic
 import (
 	"fmt"
 	"math/bits"
+	"sort"
 	"unsafe"
 )
 
@@ -58,9 +59,16 @@ func GoMap2MagicMap(m map[uint64]uint64) (mm MagicMap) {
 	// Create the adequate type of magic map
 	mm = NewMagicMap(in, out)
 
-	// Fill the map
-	for k, v := range m {
-		mm.Set((k), (v))
+	// sort the keys
+	keys := make([]uint64, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	// Fill the magic map in a deterministic way
+	for _, k := range keys {
+		mm.Set(k, m[k])
 	}
 
 	fmt.Printf("Created and filled a magicmap ( mem size %d bytes)\n", mm.Size())
