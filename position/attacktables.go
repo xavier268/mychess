@@ -1,5 +1,7 @@
 package position
 
+import "mychess/magic"
+
 // ========================================================
 // This file contains the tables to compute the attack sets
 // ========================================================
@@ -7,25 +9,25 @@ package position
 // Global tables used to compute attack sets
 var (
 
-	// NB :
-	// Pawn attacks and moves and Castling do not use precomputed tables.
-	// Queen is a combination of rook & bishop
+// NB :
+// Pawn attacks and moves and Castling do not use precomputed tables.
+// Queen is a combination of rook & bishop
 
-	// All tables have a square symetry vertical/horizontal, and the square input is reduced to 1/4 of the board (16 instead of 64).
+// All tables have a square symetry vertical/horizontal, and the square input is reduced to 1/4 of the board (16 instead of 64).
 
-	// Tables for rook attacks
-	RookMasks   [16]Bitboard // mask for querying rootAttacks table
-	RookAttacks [16]MagicMap // derives attacks from occupancy
+// // Tables for rook attacks
+// RookMasks   [16]Bitboard // mask for querying rootAttacks table
+// RookAttacks [16]MagicMap // derives attacks from occupancy
 
-	// Tables for bishop attacks
-	BishopMasks   [16]Bitboard // mask for querying bishop table
-	BishopAttacks [16]MagicMap // derives attack from occupancy
+// // Tables for bishop attacks
+// BishopMasks   [16]Bitboard // mask for querying bishop table
+// BishopAttacks [16]MagicMap // derives attack from occupancy
 
-	// Tables for knight attacks
-	KnightAttacks [16]Bitboard // max attack
+// // Tables for knight attacks
+// KnightAttacks [16]Bitboard // max attack
 
-	// Tables for king attacks
-	KingAttacks [16]Bitboard // max attack
+// // Tables for king attacks
+// KingAttacks [16]Bitboard // max attack
 
 )
 
@@ -164,13 +166,13 @@ func generateRookAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
 }
 
 // Generate the magic maps for rook attacks for the given square
-func GenerateRookAttacksMagicMapSq(sq Square) MagicMap {
-	res := make(map[Bitboard]Bitboard, 1<<6)
+func GenerateRookAttacksMagicMapSq(sq Square) magic.MagicMap {
+	res := make(map[uint64]uint64, 1<<6)
 	mask := GenerateRookMaskSq(sq) // mask for the square occupancy
 	// generate all possible occupancy within the above mask
 	for occ := range mask.BitCombinations {
-		res[occ] = generateRookAttackSetSqOcc(sq, occ)
+		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
 	}
 	// convert resulting go map to magic map and save it to global variable
-	return GoMap2MagicMap(res)
+	return magic.GoMap2MagicMap(res)
 }

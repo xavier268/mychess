@@ -1,4 +1,4 @@
-package position
+package magic
 
 import (
 	"fmt"

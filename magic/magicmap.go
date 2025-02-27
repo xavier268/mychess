@@ -1,4 +1,4 @@
-package position
+package magic
 
 import (
 	"fmt"
@@ -37,13 +37,13 @@ type MagicStats struct {
 }
 
 // Construct in a deterministic way a magicmap from a go map.
-func GoMap2MagicMap(m map[Bitboard]Bitboard) (mm MagicMap) {
+func GoMap2MagicMap(m map[uint64]uint64) (mm MagicMap) {
 
 	fmt.Printf("Processing a go map of %d bytes\n", int(unsafe.Sizeof((mm))))
 
 	// Compte nbr of keys and nbr of DISTINCTS values
 	nbkeys := len(m)
-	dedup := make(map[Bitboard]bool, len(m))
+	dedup := make(map[uint64]bool, len(m))
 	// dedup values
 	for _, v := range m {
 		dedup[v] = true
@@ -59,7 +59,7 @@ func GoMap2MagicMap(m map[Bitboard]Bitboard) (mm MagicMap) {
 
 	// Fill the map
 	for k, v := range m {
-		mm.Set(uint64(k), uint64(v))
+		mm.Set((k), (v))
 	}
 
 	fmt.Printf("Created and filled a magicmap ( mem size %d bytes)\n", mm.Size())

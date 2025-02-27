@@ -1,5 +1,3 @@
-package position
-
 
 import (
 	"fmt"
