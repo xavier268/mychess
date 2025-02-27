@@ -19,6 +19,7 @@ type BitConfig struct {
 }
 
 var CodegenConfigs = []BitConfig{
+	{IN: 13, OUT: 6},
 	{IN: 12, OUT: 6},
 	{IN: 11, OUT: 6},
 	{IN: 10, OUT: 6},

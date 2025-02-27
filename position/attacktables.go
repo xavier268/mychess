@@ -154,7 +154,7 @@ func generateRookAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
 		}
 	}
 	// west
-	for i = f - 1; f >= 0; f-- {
+	for i = f - 1; i >= 0; i-- {
 		as = as.Set(Sq(r, i))
 		if occ.IsSet(Sq(r, i)) {
 			break // break after adding the 1srt occupancy
