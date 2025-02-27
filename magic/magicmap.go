@@ -1,3 +1,4 @@
+// utility package defining cpu/memory optimized maps for storing attack sets.
 package magic
 
 import (
