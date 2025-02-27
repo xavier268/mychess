@@ -1,5 +1,11 @@
 package position
 
+import (
+	"fmt"
+	"math/bits"
+	"unsafe"
+)
+
 // MagicMap is a map optimized (memory/cpu) for retrieval, using 64-bits words both as keys and values.
 // Optimization uses the fact that the number of distinct input values and output values are smaller that 2^64, with much less output than input.
 // Set panic if attempting to store beyond capacity.
@@ -19,6 +25,44 @@ type MagicMap interface {
 	AllValues() []uint64            // get all values - testing only, excluding the value of the 0 key
 	Dump()                          // dump key -> values - testing only
 	SetMagic(magic uint64) MagicMap //magic value - testing only
+	Stats() MagicStats              // statistics on collisions - testing only
 }
 
 const defaultmagic uint64 = 11400714819323198485
+
+type MagicStats struct {
+	Coll      int // nbr of key collisions
+	Maxsearch int // max nbr of key searches
+	Sumsearch int // sum of key searches of the entire keyset
+}
+
+// Construct in a deterministic way a magicmap from a go map.
+func GoMap2MagicMap(m map[Bitboard]Bitboard) (mm MagicMap) {
+
+	fmt.Printf("Processing a go map of %d bytes\n", int(unsafe.Sizeof((mm))))
+
+	// Compte nbr of keys and nbr of DISTINCTS values
+	nbkeys := len(m)
+	dedup := make(map[Bitboard]bool, len(m))
+	// dedup values
+	for _, v := range m {
+		dedup[v] = true
+	}
+	nbvalues := len(dedup)
+	dedup = nil
+
+	// compute how many bits are needed to store the keys and the distincts values
+	in, out := bits.Len(uint(nbkeys)), bits.Len(uint(nbvalues))
+
+	// Create the adequate type of magic map
+	mm = NewMagicMap(in, out)
+
+	// Fill the map
+	for k, v := range m {
+		mm.Set(uint64(k), uint64(v))
+	}
+
+	fmt.Printf("Created and filled a magicmap ( mem size %d bytes)\n", mm.Size())
+
+	return mm
+}

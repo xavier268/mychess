@@ -137,6 +137,8 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
 	nbin, nbout := mm.Count()
 	size := mm.Size()
 	fmt.Printf("MagicMap : %d/%d keys, %d/%d values (memory used : %d bytes)\n", nbin, maxin, nbout, maxout, size)
+	st := mm.Stats()
+	fmt.Printf("Stats : %d collision, average search length %.2f, max search length %d\n", st.Coll, float64 (st.Sumsearch)/float64(nbin), st.Maxsearch )
 	fmt.Printf("0-key :   %016X (%20d) -> %016X (%20d)\n",  0,0, mm.zerovalue, mm.zerovalue)	
 	for i, k := range mm.AllKeys() {
 		v := mm.Get(k)
@@ -149,3 +151,27 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
 func (mm magicMap_{{.IN}}_{{.OUT}})  hash(key uint64) uint16 {
 	return uint16((key * mm.magic) >> 24) & (1<<{{.IN}}-1) // middle bits have the most entropy
 }
+
+// Analyse the collisions in this map
+func (mm magicMap_{{.IN}}_{{.OUT}}) Stats() (st MagicStats) {
+
+	maxin := 1<< {{.IN}}
+
+	for i,k := range mm.keys {
+		if k != 0  {
+			h := mm.hash(k)
+			if mm.keys[h] == k {
+				continue // no collision !
+			}
+			st.Coll = st.Coll + 1
+			var s int
+			for s = 1; s< maxin && mm.keys[(i + s)& (maxin-1)] != k; s++  {
+				// loop until search succeeds or maxin reached
+			}
+			// s now contains the nb of searches that was required ...
+			st.Sumsearch = st.Sumsearch + s
+			st.Maxsearch = max(st.Maxsearch,s)
+			}
+		}
+		return st
+	}
