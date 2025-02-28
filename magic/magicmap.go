@@ -43,7 +43,17 @@ func GoMap2MagicMap(m map[uint64]uint64) (mm MagicMap) {
 
 	fmt.Printf("Processing a go map of %d bytes\n", int(unsafe.Sizeof((mm))))
 
-	// Compte nbr of keys and nbr of DISTINCTS values
+	// collect and sort the keys, excluding 0 key
+	keys := make([]uint64, 0, len(m))
+	for k := range m {
+		if k == 0 {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	// Compte nbr of keys and nbr of DISTINCTS values, not counting the value of the 0-key if it exists.
 	nbkeys := len(m)
 	dedup := make(map[uint64]bool, len(m))
 	// dedup values
@@ -59,15 +69,12 @@ func GoMap2MagicMap(m map[uint64]uint64) (mm MagicMap) {
 	// Create the adequate type of magic map
 	mm = NewMagicMap(in, out)
 
-	// sort the keys
-	keys := make([]uint64, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
-
 	// Fill the magic map in a deterministic way
-	for _, k := range keys {
+	// starting with 0 key if it exists.
+	if v, ok := m[0]; ok {
+		mm.Set(0, v)
+	}
+	for _, k := range keys { // keys does not contain 0-key.
 		mm.Set(k, m[k])
 	}
 

@@ -139,8 +139,13 @@ func (mm magicMap_{{.IN}}_{{.OUT}}) Dump() {
 	fmt.Printf("Stats : %d collision, average search length %.2f, max search length %d\n", st.Coll, float64 (st.Sumsearch)/float64(nbin), st.Maxsearch )
 	fmt.Printf("0-key :   %016X (%20d) -> %016X (%20d)\n",  0,0, mm.zerovalue, mm.zerovalue)	
 	for i, k := range mm.AllKeys() {
+		if (i<10) {
 		v := mm.Get(k)
 		fmt.Printf("%05d :   %016X (%20d) -> %016X (%20d)\n", i, k, k, v, v)
+		}
+		if i == 10 {		
+		fmt.Printf("%05d :      (... more records ...)\n",i)		
+		}
 	}
 }
 

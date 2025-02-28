@@ -11,7 +11,7 @@ import (
 // ====================================
 
 // Square from 0 to 63
-type Square int
+type Square uint8
 
 // Rank/File coordinates of a given square
 // 0-based
@@ -43,7 +43,7 @@ func (s Square) String() string {
 }
 
 func (s Square) IsValid() bool {
-	return s >= 0 && s < 64
+	return s < 64
 }
 
 func (s Square) Rank() int {

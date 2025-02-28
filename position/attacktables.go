@@ -1,7 +1,5 @@
 package position
 
-import "mychess/magic"
-
 // ========================================================
 // This file contains the tables to compute the attack sets
 // ========================================================
@@ -166,13 +164,59 @@ func generateRookAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
 }
 
 // Generate the magic maps for rook attacks for the given square
-func GenerateRookAttacksMagicMapSq(sq Square) magic.MagicMap {
-	res := make(map[uint64]uint64, 1<<6)
-	mask := GenerateRookMaskSq(sq) // mask for the square occupancy
+func GenerateRookAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
+	res = make(map[uint64]uint64, 1<<6) // start small
+	mask := GenerateRookMaskSq(sq)      // mask for the square occupancy
 	// generate all possible occupancy within the above mask
 	for occ := range mask.BitCombinations {
 		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
 	}
-	// convert resulting go map to magic map and save it to global variable
-	return magic.GoMap2MagicMap(res)
+
+	return res
+}
+
+func generateBishopAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
+	r, f := sq.RF()
+	as := Bitboard(0) // default attack set
+	var i, j int
+
+	// north east
+	for i, j = r+1, f+1; i < 8 && j < 8; i, j = i+1, j+1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break // break after adding the 1srt occupancy
+		}
+	}
+	// north west
+	for i, j = r+1, f-1; i < 8 && j >= 0; i, j = i+1, j-1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break // break after adding the 1srt occupancy
+		}
+	}
+	// south east
+	for i, j = r-1, f+1; i >= 0 && j < 8; i, j = i-1, j+1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break // break after adding the 1srt occupancy
+		}
+	}
+	// south west
+	for i, j = r-1, f-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break // break after adding the 1srt occupancy
+		}
+	}
+	return as
+}
+
+func GenerateBishopAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
+	res = make(map[uint64]uint64, 1<<4) // start small
+	mask := GenerateBishopMaskSq(sq)    // mask for the square occupancy
+	// generate all possible occupancy within the above mask
+	for occ := range mask.BitCombinations {
+		res[uint64(occ)] = uint64(generateBishopAttackSetSqOcc(sq, occ))
+	}
+	return res
 }
