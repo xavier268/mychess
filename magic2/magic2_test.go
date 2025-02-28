@@ -90,3 +90,8 @@ func TestNextPowerOfTwo(t *testing.T) {
 	}
 
 }
+
+func TestCreateEmptyMagic(t *testing.T) {
+	_, st := CreateMagic2()
+	fmt.Print(st.String())
+}

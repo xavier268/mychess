@@ -16,19 +16,19 @@ import (
 // Chunks may overlapp if less than 256.
 type Magic2 struct {
 	// key search
-	key    [nbkeys]uint64 // fixed array of keys, addressed with a hash and linear search
-	sqt    [nbkeys]uint8  // fixed array, in sync with keys, combined square and what to detect collisions
-	vindex [nbkeys]uint8  // fixed array, in sync with keys, pointing to dictionnary value index.
+	key    [NBKeys]uint64 // fixed array of keys, addressed with a hash and linear search
+	sqt    [NBKeys]uint8  // fixed array, in sync with keys, combined square and what to detect collisions
+	vindex [NBKeys]uint8  // fixed array, in sync with keys, pointing to dictionnary value index.
 
 	// value dictionnay - split in up to 256 chunks of up to 256 distinct values for a given sqt
-	values [nbvalues]uint64 // value dictionary, fixed array of all output values.
+	values [NBValues]uint64 // value dictionary, fixed array of all output values.
 	// chunks always have a length of 256, but may overlapp, in particular for empty chunks.
 	start [256]uint64 // points to chunk start in the values array, indexed on sqt - not necessarily a power of two.  Not neccesarily in order.
 }
 
 const (
-	nbkeys   = 1 << 16   // max, SHOULD BE A POWER OF TWO !
-	nbvalues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
+	NBKeys   = 1 << 15   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
+	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 
 // magic numbers used by hash function, based on reduced 4-bit square
@@ -175,7 +175,7 @@ func (m Magic2) Get(sqt uint8, key uint64) uint64 {
 	// inverse key to allow for 0-key !
 	key = ^key
 	// search for matching key - infinite loop while not found ...
-	for i := hash(sqt, key) & (nbkeys - 1); ; i = (i + 1) & (nbkeys - 1) {
+	for i := hash(sqt, key) & (NBKeys - 1); ; i = (i + 1) & (NBKeys - 1) {
 		if (m.key[i] == key) && (m.sqt[i] == sqt) { // found matching key and sqt !
 			// return value
 			return m.values[uint64(m.vindex[i])+m.start[sqt]]
@@ -201,7 +201,26 @@ type Stats struct {
 	MemoryUsed    uint64 // memory used by the table
 }
 
-const hashRatioDefault = 1.15 // +15% free space.
+func (st Stats) String() string {
+	return fmt.Sprintf(
+		`
+  -----------------
+  Stats for Magic2:
+  -----------------
+  CollCount           %d
+  CollSumSearch       %d
+  CollAverageSearch   %.2f
+  CollMaxSearch       %d
+  ActualKeys          %d  / %d
+  ActualValues        %d  / %d
+  MemoryUsed          %d bytes
+  -----------------------------------
+  `,
+		st.CollCount, st.CollSumSearch, float64(st.CollSumSearch)/float64(st.CollCount), st.CollMaxSearch,
+		st.ActualKeys, NBKeys,
+		st.ActualValues, NBValues,
+		st.MemoryUsed)
+}
 
 // Create a new magic2 table in the heap.
 // Each TableEntry will create a new Chunk, in the order they are provided.
@@ -209,6 +228,9 @@ const hashRatioDefault = 1.15 // +15% free space.
 // Caution : keys are stored inverted, so no key should ever be 64 ones (^uint64(0)) !
 // Caution : result is NOT deterministic, because we directly range over map entries.
 func CreateMagic2(te ...TableEntry) (m Magic2, stat Stats) {
+
+	// measure memory footprint
+	stat.MemoryUsed = uint64(unsafe.Sizeof(m))
 
 	// check inputs
 	if len(te) == 0 {
@@ -223,7 +245,7 @@ func CreateMagic2(te ...TableEntry) (m Magic2, stat Stats) {
 		v   uint64
 		sqt uint8
 	}
-	dictionnary := make(map[dicentry]uint8, nbvalues) // value,sqt  -> relative index to start of chunk
+	dictionnary := make(map[dicentry]uint8, NBValues) // value,sqt  -> relative index to start of chunk
 	countinputkeys := 0
 
 	// === Prepare dictionnary for output values
@@ -251,21 +273,21 @@ func CreateMagic2(te ...TableEntry) (m Magic2, stat Stats) {
 	}
 
 	// check again ...
-	if len(dictionnary) > nbvalues {
-		panic(fmt.Sprintf("too many total output values (%d) - configurated maximum was %d", len(dictionnary), nbvalues))
+	if len(dictionnary) > NBValues {
+		panic(fmt.Sprintf("too many total output values (%d) - configurated maximum was %d", len(dictionnary), NBValues))
 	}
-	if countinputkeys >= nbkeys { // because 1 key cannot be used ...
-		panic(fmt.Sprintf("too many total input keys (%d) - allowed maximum was (%d-1)", countinputkeys, nbkeys))
+	if countinputkeys >= NBKeys { // because 1 key cannot be used ...
+		panic(fmt.Sprintf("too many total input keys (%d) - allowed maximum was (%d-1)", countinputkeys, NBKeys))
 	}
 
 	// == fill in input keys
 	for _, table := range te {
 		for k, v := range table.Values {
 			k = ^k // invert k !
-			h := hash(table.Sqt, k) & (nbkeys - 1)
+			h := hash(table.Sqt, k) & (NBKeys - 1)
 			var s uint64 // search distance
 			// endless loop until empty slot is found
-			for i := h; s < nbkeys; s, i = s+1, (i+1)&(nbkeys-1) {
+			for i := h; s < NBKeys; s, i = s+1, (i+1)&(NBKeys-1) {
 				if m.key[i] == 0 { // found available slot
 					m.key[i] = k
 					m.sqt[i] = table.Sqt
@@ -286,8 +308,7 @@ func CreateMagic2(te ...TableEntry) (m Magic2, stat Stats) {
 		m.values[uint64(ri)+m.start[de.sqt]] = de.v
 	}
 
-	// Compute stats
-	stat.MemoryUsed = uint64(unsafe.Sizeof(m))
+	// Update stats
 	stat.ActualKeys = uint64(countinputkeys)
 	stat.ActualValues = uint64(len(dictionnary))
 
