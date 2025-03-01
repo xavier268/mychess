@@ -95,3 +95,46 @@ func TestCreateEmptyMagic(t *testing.T) {
 	_, st := CreateMagic2()
 	fmt.Print(st.String())
 }
+
+func TestStoreGetMagic2(t *testing.T) {
+	t1 := TableEntry{
+		Sqt: 6,
+		Values: map[uint64]uint64{
+			1: 10,
+			2: 20,
+			3: 30,
+			4: 40,
+			5: 50,
+			6: 60,
+		},
+	}
+
+	t2 := TableEntry{
+		Sqt: 7,
+		Values: map[uint64]uint64{
+			1: 100,
+			2: 200,
+			3: 300,
+			4: 400,
+			5: 500,
+			6: 600,
+		},
+	}
+
+	m, st := CreateMagic2(t1, t2)
+	fmt.Println(st.String())
+
+	for k, v := range t1.Values {
+		if m.Get(t1.Sqt, k) != v {
+			t.Errorf("st.Get(%d) = %d, want %d", k, m.Get(t1.Sqt, k), v)
+		}
+	}
+
+	for k, v := range t2.Values {
+		if m.Get(t2.Sqt, k) != v {
+			t.Errorf("st.Get(%d) = %d, want %d", k, m.Get(t2.Sqt, k), v)
+		}
+	}
+	fmt.Println("Storage verification succeeded")
+
+}
