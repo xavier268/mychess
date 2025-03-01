@@ -95,6 +95,9 @@ func TestCreateEmptyMagic(t *testing.T) {
 	var m MagicMap
 	st := CreateMagicMap(&m)
 	fmt.Print(st.String())
+	if st.MemoryUsed < 16 {
+		t.Errorf("st.MemoryUsed suspisciuly low :( %d bytes only ?!)", st.MemoryUsed)
+	}
 }
 
 func TestStoreGetMagicMap(t *testing.T) {
