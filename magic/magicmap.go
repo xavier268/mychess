@@ -230,7 +230,7 @@ func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
 	}
 
 	// measure memory footprint
-	stat.MemoryUsed = uint64(unsafe.Sizeof(m))
+	stat.MemoryUsed = uint64(unsafe.Sizeof(*m))
 
 	if NextPowerOfTwo(NBKeys) != NBKeys {
 		panic(fmt.Sprintf("NBKeys (%d) is not a power of 2", NBKeys))

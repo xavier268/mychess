@@ -101,6 +101,7 @@ func TestStoreGetMagicMap(t *testing.T) {
 	t1 := TableEntry{
 		Sqt: 6,
 		Values: map[uint64]uint64{
+			0: 999,
 			1: 10,
 			2: 20,
 			3: 30,
@@ -113,6 +114,7 @@ func TestStoreGetMagicMap(t *testing.T) {
 	t2 := TableEntry{
 		Sqt: 7,
 		Values: map[uint64]uint64{
+			0: 888,
 			1: 100,
 			2: 200,
 			3: 300,
