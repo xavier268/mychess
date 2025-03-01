@@ -1,22 +1,7 @@
 package position
 
-const (
-	EMPTY = iota
-	PAWN
-	BISHOP
-	KNIGHT
-	ROOK
-	QUEEN
-	KING
-)
-
-const (
-	WHITE = 1
-	BLACK = 0
-)
-
 type Position struct {
-	// all pieces together, without en-passant position, but with kings
+	// all pieces together, EXCLUDING en-passant position, but INCLUDING kings
 	whiteOcc Bitboard
 	// all pieces together
 	blackOcc Bitboard
@@ -27,6 +12,8 @@ type Position struct {
 	rookOcc Bitboard
 	// all colors together
 	bishopOcc Bitboard
+	// all colors together
+	knightOcc Bitboard
 
 	// queen appears as both a rook and a bishop
 	// king positions derived from status data below
@@ -48,12 +35,47 @@ type Position struct {
 	// 7   : if set, colors of the physical board have been reversed, to ensure WHITE is always expected to play in this position.
 	//
 	// byte 3
-	// reserved - whose king is under attack ( mine or yours ? ), mat or draw, or game-over flags ?
+	// reserved - could be whose king is under attack ( mine or yours ? ), mat or draw, or game-over flags ?
 	//
-	// byte 4 & 5 ( 0 / 65 535)
+	// byte 4 & 5 ( -32 000 /+ 32 000)
+	// reserved - could be the material value of the position ?
+	//
+	// byte 6 & 7 ( 0 / 65 535)
 	// uint16 representing total number of ply so far
-	//
-	// byte 6 & 7 (-32 000 / +32 000)
-	// int16 representing material value of the board ?
 	status uint64
+}
+
+const (
+	StartWhiteOcc  Bitboard = 0xFFFF
+	StartBlackOcc  Bitboard = 0xFFFF << 48
+	StartPawnOcc   Bitboard = (0xFF << 8) | (0xFF << 48)
+	StartRookOcc   Bitboard = 0x81 | (0x81 << 56)
+	StartKnightOcc Bitboard = 0x42 | (0x42 << 56)
+	StartBishopOcc Bitboard = (1 << 2) | (1 << 5) | (1 << (2 + 56)) | (1 << (5 + 56))
+	StartQueenOcc  Bitboard = 1<<3 | (1 << (3 + 56))
+	StartKingOcc   Bitboard = 1<<4 | (1 << (4 + 56))
+
+	CanCastleKingSide  = 0b10000000
+	CanCastleQueenSide = 0b01000000
+	CanCastle          = CanCastleQueenSide | CanCastleKingSide
+)
+
+var StartPosition = Position{
+	whiteOcc:  StartWhiteOcc,
+	blackOcc:  StartBlackOcc,
+	pawnOcc:   StartPawnOcc,
+	rookOcc:   StartRookOcc | StartQueenOcc,
+	bishopOcc: StartBishopOcc | StartQueenOcc,
+	knightOcc: StartKnightOcc,
+	status: CanCastle | 4 | // white king position
+		(CanCastle|60)<<8, // black king position
+
+}
+
+func (p Position) GetWhiteKingSquare() Square {
+	return Square(p.status & 0b00111111)
+}
+
+func (p Position) GetBlackKingSquare() Square {
+	return Square((p.status >> 8) & 0b00111111)
 }
