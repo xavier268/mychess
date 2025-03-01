@@ -35,10 +35,7 @@ type Position struct {
 	// 7   : if set, colors of the physical board have been reversed, to ensure WHITE is always expected to play in this position.
 	//
 	// byte 3
-	// reserved - could be whose king is under attack ( mine or yours ? ), mat or draw, or game-over flags ? En passant file ?
-	//
-	// byte 4 & 5 ( -32 000 /+ 32 000)
-	// reserved - could be the material value of the position ?
+	// reserved - whose king is under attack ( mine or yours ? ), mat or draw, or game-over flags ?
 	//
 	// byte 6 & 7 ( 0 / 65 535)
 	// uint16 representing total number of ply so far
