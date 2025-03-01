@@ -92,7 +92,8 @@ func TestNextPowerOfTwo(t *testing.T) {
 }
 
 func TestCreateEmptyMagic(t *testing.T) {
-	_, st := CreateMagicMap()
+	var m MagicMap
+	st := CreateMagicMap(&m)
 	fmt.Print(st.String())
 }
 
@@ -120,8 +121,8 @@ func TestStoreGetMagicMap(t *testing.T) {
 			6: 600,
 		},
 	}
-
-	m, st := CreateMagicMap(t1, t2)
+	var m MagicMap
+	st := CreateMagicMap(&m, t1, t2)
 	fmt.Println(st.String())
 
 	for k, v := range t1.Values {

@@ -11,7 +11,7 @@ var (
 // Pawn attacks and moves and Castling do not use precomputed tables.
 // Queen is a combination of rook & bishop
 
-// All tables have a square symetry vertical/horizontal, and the square input is reduced to 1/4 of the board (16 instead of 64).
+// All tables have a square symetry vertical/horizontal, and the square input is reduced to quadrant QA1
 
 // // Tables for rook attacks
 // RookMasks   [16]Bitboard // mask for querying rootAttacks table

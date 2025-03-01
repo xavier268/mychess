@@ -223,7 +223,11 @@ func (st Stats) String() string {
 // If a chunk does not exist, it will start at 0. It should NEVER be called !
 // Caution : keys are stored inverted, so no key should ever be 64 ones (^uint64(0)) !
 // Caution : result is NOT deterministic, because we directly range over map entries.
-func CreateMagicMap(te ...TableEntry) (m MagicMap, stat Stats) {
+func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
+
+	if m == nil {
+		panic("destination MagicMap is required to create")
+	}
 
 	// measure memory footprint
 	stat.MemoryUsed = uint64(unsafe.Sizeof(m))
@@ -312,5 +316,5 @@ func CreateMagicMap(te ...TableEntry) (m MagicMap, stat Stats) {
 	stat.ActualKeys = uint64(countinputkeys)
 	stat.ActualValues = uint64(len(dictionnary))
 
-	return m, stat
+	return stat
 }
