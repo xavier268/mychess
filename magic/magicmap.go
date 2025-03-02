@@ -6,7 +6,9 @@ import (
 )
 
 const (
-	NBKeys   = 1 << 22   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
+	// max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
+	NBKeys = 1 << 30
+
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 
@@ -168,7 +170,7 @@ func NextPowerOfTwo(v uint64) uint64 {
 
 // Retrieve a uint64 value given a 64-bits key and a uint8 combination of Square and What.
 // CAUTION : will loop forever if key does not exists in table !
-func (m MagicMap) Get(sqt uint8, key uint64) uint64 {
+func (m *MagicMap) Get(sqt uint8, key uint64) uint64 {
 	// inverse key to allow for 0-key !
 	key = ^key
 	// search for matching key - infinite loop while not found ...
@@ -204,19 +206,23 @@ func (st Stats) String() string {
   ------------------
   Stats for MagicMap 
   ------------------
-  CollCount           %d
+  CollCount           %d ( %.2f%% of the used keys )
   CollSumSearch       %d
-  CollAverageSearch   %.2f
+  CollAverageSearch   %.2f per coll. key (%.2f per actual key)
   CollMaxSearch       %d
   ActualKeys          %d  / %d
   ActualValues        %d  / %d
-  MemoryUsed          %d bytes
+  MemoryUsed          %d bytes ( %.2f MB )
   -----------------------------------
   `,
-		st.CollCount, st.CollSumSearch, float64(st.CollSumSearch)/float64(st.CollCount), st.CollMaxSearch,
+		st.CollCount, float64(st.CollCount)*100.0/float64(st.ActualKeys),
+		st.CollSumSearch,
+		float64(st.CollSumSearch)/float64(st.CollCount), float64(st.CollSumSearch)/float64(st.ActualKeys),
+		st.CollMaxSearch,
 		st.ActualKeys, NBKeys,
 		st.ActualValues, NBValues,
-		st.MemoryUsed)
+		st.MemoryUsed, float64(st.MemoryUsed)/1000000.0,
+	)
 }
 
 // Init a  MagicMap table with various entries.

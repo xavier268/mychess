@@ -20,7 +20,7 @@ func magicFormatSignature(data ...uint64) uint64 {
 var FileHeader = fmt.Sprintf("MAGICMAP FORMAT  %d", magicFormatSignature(append(magicNumbers[:], NBKeys, NBValues)...))
 
 // Save MagicMap to specified file. Directory should exist already.
-func (m MagicMap) SaveToFile(filename string) error {
+func (m *MagicMap) SaveToFile(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
