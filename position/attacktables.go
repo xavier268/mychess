@@ -53,16 +53,19 @@ func GenerateWhitePawnCaptureMaskSq(sq Square) Bitboard {
 	return b
 }
 
+// INUTILE ?! A voir ... TODO
+/*
 func GenerateWhitePawnAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
 	res = make(map[uint64]uint64, 1<<6)         // start small
 	cmask := GenerateWhitePawnCaptureMaskSq(sq) // mask for the square occupancy
 	mmask := GenerateWhitePawnMoveMaskSq(sq)    // mask for the move occupancy
 	// generate all possible occupancy within the above merged masks
-	for occ := range (cmask | mmask).BitCombinations {
+	for occ := range (cmask | mmask).AllBitCombinations {
 		res[uint64(occ)] = uint64((cmask & occ) | (mmask & (^occ)))
 	}
 	return res
 }
+*/
 
 // Generate attack set for knight positions
 func GenerateKnightAttacksSq(sq Square) Bitboard {
@@ -173,7 +176,7 @@ func GenerateRookAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
 	res = make(map[uint64]uint64, 1<<6) // start small
 	mask := GenerateRookMaskSq(sq)      // mask for the square occupancy
 	// generate all possible occupancy within the above mask
-	for occ := range mask.BitCombinations {
+	for occ := range mask.AllBitCombinations {
 		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
 	}
 
@@ -220,7 +223,7 @@ func GenerateBishopAttacksSq(sq Square) (res map[uint64]uint64) {
 	res = make(map[uint64]uint64, 1<<4) // start small
 	mask := GenerateBishopMaskSq(sq)    // mask for the square occupancy
 	// generate all possible occupancy within the above mask
-	for occ := range mask.BitCombinations {
+	for occ := range mask.AllBitCombinations {
 		res[uint64(occ)] = uint64(generateBishopAttackSetSqOcc(sq, occ))
 	}
 	return res
@@ -230,7 +233,7 @@ func GenerateBishopAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
 	res = make(map[uint64]uint64, 1<<8) // start small
 	mask := GenerateRookMaskSq(sq)      // mask for the square occupancy
 	// generate all possible occupancy within the above mask
-	for occ := range mask.BitCombinations {
+	for occ := range mask.AllBitCombinations {
 		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
 	}
 	return res

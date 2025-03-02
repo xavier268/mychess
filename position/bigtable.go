@@ -24,7 +24,7 @@ type BigTable struct {
 	// Tables are :
 	// 0-  rookattacksets
 	// 1-  bishop attack sets
-	// 2-  whitepawn attack sets // TODO !
+	// 2-  XXXXXX whitepawn attack sets  ==> INUTILE ?? // TODO
 	// Since we have less than 4 tables, we do not need to use reduced squares and mirror the results.
 	*magic.MagicMap
 }
@@ -58,8 +58,8 @@ func NewBigTable() *BigTable {
 		te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 1)), Values: GenerateBishopAttacksMagicMapSq(sq)}
 		tes = append(tes, te)
 		// white pawn - table 2
-		te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 2)), Values: GenerateWhitePawnAttacksMagicMapSq(sq)}
-		tes = append(tes, te)
+		// te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 2)), Values: GenerateWhitePawnAttacksMagicMapSq(sq)}
+		// tes = append(tes, te)
 	}
 	st := magic.InitMagicMap(b.MagicMap, tes...)
 	fmt.Println(st.String())
