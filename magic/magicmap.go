@@ -7,7 +7,8 @@ import (
 
 const (
 	// max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
-	NBKeys = 1 << 30
+	// 1<<32 needs 42Go memory. Probably the reasonable maximum ?
+	NBKeys = 1 << 33
 
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
@@ -210,8 +211,8 @@ func (st Stats) String() string {
   CollSumSearch       %d
   CollAverageSearch   %.2f per coll. key (%.2f per actual key)
   CollMaxSearch       %d
-  ActualKeys          %d  / %d
-  ActualValues        %d  / %d
+  ActualKeys          %d  / %d (%.2f%% of capacity )
+  ActualValues        %d  / %d (%.2f%% of capacity )
   MemoryUsed          %d bytes ( %.2f MB )
   -----------------------------------
   `,
@@ -219,8 +220,8 @@ func (st Stats) String() string {
 		st.CollSumSearch,
 		float64(st.CollSumSearch)/float64(st.CollCount), float64(st.CollSumSearch)/float64(st.ActualKeys),
 		st.CollMaxSearch,
-		st.ActualKeys, NBKeys,
-		st.ActualValues, NBValues,
+		st.ActualKeys, NBKeys, float64(st.ActualKeys)*100.0/float64(NBKeys),
+		st.ActualValues, NBValues, float64(st.ActualValues)*100.0/float64(NBValues),
 		st.MemoryUsed, float64(st.MemoryUsed)/1000000.0,
 	)
 }
