@@ -8,7 +8,7 @@ import (
 const (
 	// max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
 	// 1<<32 needs 42Go memory. Probably the reasonable maximum ?
-	NBKeys = 1 << 33
+	NBKeys = 1 << 32
 
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
