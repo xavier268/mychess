@@ -207,13 +207,13 @@ func (st Stats) String() string {
   ------------------
   Stats for MagicMap 
   ------------------
-  CollCount           %d ( %.2f%% of the used keys )
+  CollCount           %d ( %.3f%% of the used keys )
   CollSumSearch       %d
-  CollAverageSearch   %.2f per coll. key (%.2f per actual key)
+  CollAverageSearch   %.0f per coll. key (%.0f per actual key)
   CollMaxSearch       %d
-  ActualKeys          %d  / %d (%.2f%% of capacity )
-  ActualValues        %d  / %d (%.2f%% of capacity )
-  MemoryUsed          %d bytes ( %.2f MB )
+  ActualKeys          %d  / %d (%.3f%% of capacity )
+  ActualValues        %d  / %d (%.3f%% of capacity )
+  MemoryUsed          %d bytes ( %.1f MB, or %.1f GB )
   -----------------------------------
   `,
 		st.CollCount, float64(st.CollCount)*100.0/float64(st.ActualKeys),
@@ -222,7 +222,7 @@ func (st Stats) String() string {
 		st.CollMaxSearch,
 		st.ActualKeys, NBKeys, float64(st.ActualKeys)*100.0/float64(NBKeys),
 		st.ActualValues, NBValues, float64(st.ActualValues)*100.0/float64(NBValues),
-		st.MemoryUsed, float64(st.MemoryUsed)/1000000.0,
+		st.MemoryUsed, float64(st.MemoryUsed)/1000000.0, float64(st.MemoryUsed)/1000000000.0,
 	)
 }
 
