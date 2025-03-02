@@ -9,8 +9,18 @@ import (
 const (
 	// max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
 	// 1<<32 needs 42Go memory. Probably the reasonable maximum ?
-	NBKeys = 1 << 25 // semble être un bon compromis, avec 2K searches et 97% de collisions ...
-
+	// 	------------------
+	//   Stats for MagicMap
+	//   ------------------
+	//   CollCount           80088 ( 39.0% of the used keys vs 100.0% in theory )
+	//   CollSumSearch       376772
+	//   CollAverageSearch   5 per coll. key, 2 per actual key ( versus 0.78 in theory )
+	//   CollMaxSearch       202
+	//   ActualKeys          205256  / 262144 (78.299% load factor )
+	//   ActualValues        10256  / 65536 (15.649% load factor )
+	//   MemoryUsed          3147776 bytes ( 3.1 MB, or 0.0 GB )
+	//   -----------------------------------
+	NBKeys   = 1 << 18   // Minimum required to fit all the keys - see stats above, not bad...
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 
