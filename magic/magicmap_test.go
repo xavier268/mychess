@@ -2,6 +2,7 @@ package magic
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"unsafe"
 )
@@ -93,7 +94,7 @@ func TestNextPowerOfTwo(t *testing.T) {
 
 func TestCreateEmptyMagic(t *testing.T) {
 	var m MagicMap
-	st := CreateMagicMap(&m)
+	st := InitMagicMap(&m)
 	fmt.Print(st.String())
 	if st.MemoryUsed < 16 {
 		t.Errorf("st.MemoryUsed suspisciuly low :( %d bytes only ?!)", st.MemoryUsed)
@@ -127,7 +128,7 @@ func TestStoreGetMagicMap(t *testing.T) {
 		},
 	}
 	var m MagicMap
-	st := CreateMagicMap(&m, t1, t2)
+	st := InitMagicMap(&m, t1, t2)
 	fmt.Println(st.String())
 
 	for k, v := range t1.Values {
@@ -143,4 +144,17 @@ func TestStoreGetMagicMap(t *testing.T) {
 	}
 	fmt.Println("Storage verification succeeded")
 
+	testfile := "magicmap_test.bin"
+	os.Remove(testfile)
+	if err := m.SaveToFile(testfile); err != nil {
+		t.Errorf("SaveToFile failed: %s", err)
+	}
+	m2 := MagicMap{}
+	if err := Load(testfile, &m2); err != nil {
+		t.Errorf("Load failed: %s", err)
+	}
+
+	if m2 != m {
+		t.Errorf("Information content changed between SaveToFile/Load")
+	}
 }

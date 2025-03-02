@@ -27,19 +27,19 @@ const (
 )
 
 var PieceRepresentation = map[Piece]rune{
-	PAWN:    'p',
-	BISHOP:  'b',
-	KNIGHT:  'n',
-	ROOK:    'r',
-	QUEEN:   'q',
-	KING:    'k',
+	PAWN:    'P',
+	BISHOP:  'B',
+	KNIGHT:  'N',
+	ROOK:    'R',
+	QUEEN:   'Q',
+	KING:    'K',
 	EMPTY:   '.',
-	-PAWN:   'P',
-	-BISHOP: 'B',
-	-KNIGHT: 'N',
-	-ROOK:   'R',
-	-QUEEN:  'Q',
-	-KING:   'K',
+	-PAWN:   'p',
+	-BISHOP: 'b',
+	-KNIGHT: 'n',
+	-ROOK:   'r',
+	-QUEEN:  'q',
+	-KING:   'k',
 }
 
 // Print position.

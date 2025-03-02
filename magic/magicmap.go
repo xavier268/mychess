@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	NBKeys   = 1 << 10   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
+	NBKeys   = 1 << 16   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 
@@ -17,20 +17,21 @@ const (
 // No more than 256 distinct VALUES per sqt (ie, a given square and table), forming a chunk.
 // Dictionnary is made of up to 256 chunks, 1 per sqt.
 // Chunks may overlapp if less than 256.
+// NB : fields are public to facilitate save/load, but should never be acessed directly...
 type MagicMap struct {
-	// key search
-	key    [NBKeys]uint64 // fixed array of keys, addressed with a hash and linear search
-	sqt    [NBKeys]uint8  // fixed array, in sync with keys, combined square and what to detect collisions
-	vindex [NBKeys]uint8  // fixed array, in sync with keys, pointing to dictionnary value index.
+	// Key search
+	Key    [NBKeys]uint64 // fixed array of keys, addressed with a hash and linear search
+	Sqt    [NBKeys]uint8  // fixed array, in sync with keys, combined square and what to detect collisions
+	Vindex [NBKeys]uint8  // fixed array, in sync with keys, pointing to dictionnary value index.
 
-	// value dictionnay - split in up to 256 chunks of up to 256 distinct values for a given sqt
-	values [NBValues]uint64 // value dictionary, fixed array of all output values.
+	// value dictionnay - split in up to 256 chunks of up to 256 distinct Values for a given sqt
+	Values [NBValues]uint64 // value dictionary, fixed array of all output values.
 	// chunks always have a length of 256, but may overlapp, in particular for empty chunks.
-	start [256]uint64 // points to chunk start in the values array, indexed on sqt - not necessarily a power of two.  Not neccesarily in order.
+	Start [256]uint64 // points to chunk start in the values array, indexed on sqt - not necessarily a power of two.  Not neccesarily in order.
 }
 
 // magic numbers used by hash function, based on reduced 4-bit square
-var magics = [...]uint64{ // 256 prime numbers to choose from based upon sqt value
+var magicNumbers = [...]uint64{ // 256 prime numbers to choose from based upon sqt value
 	45317, 45319, 45329, 45337, 45341, 45343, 45361, 45377, 45389, 45403,
 	45413, 45427, 45433, 45439, 45481, 45491, 45497, 45503, 45523, 45533,
 	45541, 45553, 45557, 45569, 45587, 45589, 45599, 45613, 45631, 45641,
@@ -144,7 +145,7 @@ var magics = [...]uint64{ // 256 prime numbers to choose from based upon sqt val
 // Key, in hash, should never be 0.
 // sqt is a combined square and piece in 1 byte.
 func hash(sqt uint8, key uint64) uint64 {
-	return (magics[sqt] * (key))
+	return (magicNumbers[sqt] * (key))
 }
 
 // Compute the power of two equal or greater than v.
@@ -172,9 +173,9 @@ func (m MagicMap) Get(sqt uint8, key uint64) uint64 {
 	key = ^key
 	// search for matching key - infinite loop while not found ...
 	for i := hash(sqt, key) & (NBKeys - 1); ; i = (i + 1) & (NBKeys - 1) {
-		if (m.key[i] == key) && (m.sqt[i] == sqt) { // found matching key and sqt !
+		if (m.Key[i] == key) && (m.Sqt[i] == sqt) { // found matching key and sqt !
 			// return value
-			return m.values[uint64(m.vindex[i])+m.start[sqt]]
+			return m.Values[uint64(m.Vindex[i])+m.Start[sqt]]
 		}
 	}
 }
@@ -218,12 +219,12 @@ func (st Stats) String() string {
 		st.MemoryUsed)
 }
 
-// Create a new MagicMap table.
+// Init a  MagicMap table with various entries.
 // Each TableEntry will create a new Chunk, in the order they are provided.
 // If a chunk does not exist, it will start at 0. It should NEVER be called !
 // Caution : keys are stored inverted, so no key should ever be 64 ones (^uint64(0)) !
 // Caution : result is NOT deterministic, because we directly range over map entries.
-func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
+func InitMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
 
 	if m == nil {
 		panic("destination MagicMap is required to create")
@@ -259,15 +260,15 @@ func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
 		countinputkeys += len(table.Values)
 
 		// update dictionnary chunk starts
-		if m.start[table.Sqt] != 0 {
+		if m.Start[table.Sqt] != 0 {
 			panic(fmt.Sprintf("Sqt 0x%X already exists - duplicated TableEntries ?", table.Sqt))
 		}
-		m.start[table.Sqt] = uint64(len(dictionnary))
+		m.Start[table.Sqt] = uint64(len(dictionnary))
 
 		// add all sqt/values pairs into dictionnary
 		for _, v := range table.Values {
 			if _, ok := dictionnary[dicentry{v: v, sqt: table.Sqt}]; !ok {
-				relIdx := uint64(len(dictionnary)) - m.start[table.Sqt]
+				relIdx := uint64(len(dictionnary)) - m.Start[table.Sqt]
 				if relIdx >= 256 {
 					panic(fmt.Sprintf("too many output values for sqt 0x%X", table.Sqt))
 				}
@@ -292,10 +293,10 @@ func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
 			var s uint64 // search distance
 			// endless loop until empty slot is found
 			for i := h; s < NBKeys; s, i = s+1, (i+1)&(NBKeys-1) {
-				if m.key[i] == 0 { // found available slot
-					m.key[i] = k
-					m.sqt[i] = table.Sqt
-					m.vindex[i] = dictionnary[dicentry{v: v, sqt: table.Sqt}]
+				if m.Key[i] == 0 { // found available slot
+					m.Key[i] = k
+					m.Sqt[i] = table.Sqt
+					m.Vindex[i] = dictionnary[dicentry{v: v, sqt: table.Sqt}]
 					break
 				}
 			}
@@ -309,7 +310,7 @@ func CreateMagicMap(m *MagicMap, te ...TableEntry) (stat Stats) {
 
 	// == fill in output values
 	for de, ri := range dictionnary {
-		m.values[uint64(ri)+m.start[de.sqt]] = de.v
+		m.Values[uint64(ri)+m.Start[de.sqt]] = de.v
 	}
 
 	// Update stats

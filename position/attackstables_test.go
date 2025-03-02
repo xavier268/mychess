@@ -24,3 +24,11 @@ func TestGenerateBishopAttacksTable(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateWhitePawnsAttacksTable(t *testing.T) {
+	for sq := Square(0); sq < 64; sq++ {
+		m := GenerateWhitePawnAttacksMagicMapSq(sq)
+		fmt.Printf("White pawn table for %s stats : len %d keys\n", sq.String(), len(m))
+	}
+
+}
