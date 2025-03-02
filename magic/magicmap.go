@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	NBKeys   = 1 << 16   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
+	NBKeys   = 1 << 22   // max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 
