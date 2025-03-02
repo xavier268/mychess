@@ -2,13 +2,14 @@ package magic
 
 import (
 	"fmt"
+	"math"
 	"unsafe"
 )
 
 const (
 	// max, adjust to arbitrate between speed (collisions) & memory, SHOULD BE A POWER OF TWO !
 	// 1<<32 needs 42Go memory. Probably the reasonable maximum ?
-	NBKeys = 1 << 32
+	NBKeys = 1 << 25 // semble être un bon compromis, avec 2K searches et 97% de collisions ...
 
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
@@ -207,23 +208,36 @@ func (st Stats) String() string {
   ------------------
   Stats for MagicMap 
   ------------------
-  CollCount           %d ( %.3f%% of the used keys )
+  CollCount           %d ( %.3f%% of the used keys vs %.3f%% in theory)
   CollSumSearch       %d
-  CollAverageSearch   %.0f per coll. key (%.0f per actual key)
+  CollAverageSearch   %.0f per coll. key, %.0f per actual key ( versus %.2f in theory )
   CollMaxSearch       %d
-  ActualKeys          %d  / %d (%.3f%% of capacity )
-  ActualValues        %d  / %d (%.3f%% of capacity )
+  ActualKeys          %d  / %d (%.3f%% load factor )
+  ActualValues        %d  / %d (%.3f%% load factor )
   MemoryUsed          %d bytes ( %.1f MB, or %.1f GB )
   -----------------------------------
   `,
-		st.CollCount, float64(st.CollCount)*100.0/float64(st.ActualKeys),
+		st.CollCount, float64(st.CollCount)*100.0/float64(st.ActualKeys), st.TheoricalCollProbability()*100.0,
 		st.CollSumSearch,
-		float64(st.CollSumSearch)/float64(st.CollCount), float64(st.CollSumSearch)/float64(st.ActualKeys),
+		float64(st.CollSumSearch)/float64(st.CollCount), float64(st.CollSumSearch)/float64(st.ActualKeys), st.TheoricalAverageSearch(),
 		st.CollMaxSearch,
 		st.ActualKeys, NBKeys, float64(st.ActualKeys)*100.0/float64(NBKeys),
 		st.ActualValues, NBValues, float64(st.ActualValues)*100.0/float64(NBValues),
 		st.MemoryUsed, float64(st.MemoryUsed)/1000000.0, float64(st.MemoryUsed)/1000000000.0,
 	)
+}
+
+// Compute theoretical collition rate
+func (st Stats) TheoricalCollProbability() float64 {
+	n := float64(st.ActualKeys)
+	p := float64(NBKeys)
+	v := -n * (n - 1) / (2 * p)
+	return 1.0 - math.Exp(v)
+}
+
+func (st Stats) TheoricalAverageSearch() float64 {
+	load := float64(st.ActualKeys) / float64(NBKeys)
+	return (1 + (1 / (1 + load))) * 0.5
 }
 
 // Init a  MagicMap table with various entries.
