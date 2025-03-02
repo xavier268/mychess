@@ -34,6 +34,7 @@ type MagicMap struct {
 	Start [256]uint64 // points to chunk start in the values array, indexed on sqt - not necessarily a power of two.  Not neccesarily in order.
 }
 
+/*
 // magic numbers used by hash function, based on reduced 4-bit square
 var magicNumbers = [...]uint64{ // 256 prime numbers to choose from based upon sqt value
 	45317, 45319, 45329, 45337, 45341, 45343, 45361, 45377, 45389, 45403,
@@ -143,13 +144,21 @@ var magicNumbers = [...]uint64{ // 256 prime numbers to choose from based upon s
 	56993,  56999,  57037,  57041,  57047,  57059,  57073,  57077,  57089,  57097,
 	57107,  57119,  57131,  57139,  57143,  57149,  57163,  57173,  57179,  57191,
 	57193,  57203,  57221,  57223,  57241,  57251,  57259,  57269,  57271,  57283,
-	*/
-}
 
-// Key, in hash, should never be 0.
-// sqt is a combined square and piece in 1 byte.
+}
+*/
+
+// Inspired from theoritecal hash function ...
 func hash(sqt uint8, key uint64) uint64 {
-	return (magicNumbers[sqt] * (key))
+	// return (magicNumbers[sqt] * (key))
+
+	// TEST DEBUG :
+	// Essayons avec une fonction de hashage banale et unique ...
+	key = uint64(sqt) ^ key
+	key = (key ^ (key >> 30)) * 0xbf58476d1ce4e5b9
+	key = (key ^ (key >> 27)) * 0x94d049bb133111eb
+	key = key ^ (key >> 31)
+	return key ^ uint64(sqt)
 }
 
 // Compute the power of two equal or greater than v.

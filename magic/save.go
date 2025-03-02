@@ -17,7 +17,7 @@ func magicFormatSignature(data ...uint64) uint64 {
 }
 
 // Header is always saved first in all data file, to ensure consitency.
-var FileHeader = fmt.Sprintf("MAGICMAP FORMAT  %d", magicFormatSignature(append(magicNumbers[:], NBKeys, NBValues)...))
+var FileHeader = fmt.Sprintf("MAGICMAP FORMAT  %d", magicFormatSignature(NBKeys, NBValues))
 
 // Save MagicMap to specified file. Directory should exist already.
 func (m *MagicMap) SaveToFile(filename string) error {
