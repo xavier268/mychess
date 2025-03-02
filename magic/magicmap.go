@@ -208,7 +208,7 @@ func (st Stats) String() string {
   ------------------
   Stats for MagicMap 
   ------------------
-  CollCount           %d ( %.3f%% of the used keys vs %.3f%% in theory)
+  CollCount           %d ( %.1f%% of the used keys vs %.1f%% in theory )
   CollSumSearch       %d
   CollAverageSearch   %.0f per coll. key, %.0f per actual key ( versus %.2f in theory )
   CollMaxSearch       %d
