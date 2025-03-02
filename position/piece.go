@@ -99,3 +99,11 @@ func (p Position) Dump() {
 	fmt.Println("Black king sq : ", Bitboard(1<<p.GetBlackKingSquare()).String())
 	fmt.Printf("Status : %64b\n", p.status)
 }
+
+func (p Position) GetWhiteKingSquare() Square {
+	return Square(p.status.GetWhiteKingSquare())
+}
+
+func (p Position) GetBlackKingSquare() Square {
+	return Square(p.status.GetBlackKingSquare())
+}
