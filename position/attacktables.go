@@ -188,10 +188,10 @@ func GenerateBishopAttacksSq(sq Square) (res map[uint64]uint64) {
 
 func GenerateBishopAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
 	res = make(map[uint64]uint64, 1<<8) // start small
-	mask := GenerateRookMaskSq(sq)      // mask for the square occupancy
+	mask := GenerateBishopMaskSq(sq)    // mask for the square occupancy
 	// generate all possible occupancy within the above mask
 	for occ := range mask.AllBitCombinations {
-		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
+		res[uint64(occ)] = uint64(generateBishopAttackSetSqOcc(sq, occ))
 	}
 	return res
 }

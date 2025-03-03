@@ -35,6 +35,21 @@ func TestBishopMasks(t *testing.T) {
 	}
 }
 
+func TestPawnMasks(t *testing.T) {
+
+	for sq := Square(0); sq < 64; sq += 13 {
+		fmt.Println("White capture mask for ", sq.String())
+		GenerateWhitePawnCaptureMaskSq(sq).Display()
+		fmt.Println("White move mask for ", sq.String())
+		GenerateWhitePawnMoveMaskSq(sq).Display()
+		fmt.Println("Black capture mask for ", sq.String())
+		GenerateBlackPawnCaptureMaskSq(sq).Display()
+		fmt.Println("Black move mask for ", sq.String())
+		GenerateBlackPawnMoveMaskSq(sq).Display()
+
+	}
+}
+
 func TestKnightAttacks(t *testing.T) {
 	for sq := Square(0); sq < 64; sq += 13 {
 		fmt.Println("Square", sq.String())

@@ -20,3 +20,20 @@ func (b Bitboard) Serialize() []Bitboard {
 
 	return result
 }
+
+// Range iterator over serialized boards for each bit set
+func (b Bitboard) AllSerialized(yield func(Bitboard) bool) {
+	// Continue as long as there are bits set
+	for b != 0 {
+		// Extract the lowest set bit
+		lowestBit := b & -b // Or: num & (^num + 1)
+
+		if !yield(lowestBit) {
+			return
+		}
+
+		// Clear that bit from the original number
+		b &= b - 1 // This clears the lowest set bit
+	}
+
+}

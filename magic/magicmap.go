@@ -20,7 +20,7 @@ const (
 	//   ActualValues        10256  / 65536 (15.649% load factor )
 	//   MemoryUsed          3147776 bytes ( 3.1 MB, or 0.0 GB )
 	//   -----------------------------------
-	NBKeys   = 1 << 18   // Minimum required to fit all the keys - see stats above, not bad...
+	NBKeys   = 1 << 17   // Minimum required to fit all the keys - see stats above, not bad...
 	NBValues = 256 * 256 // max, adjustable, less than nbkeys. Not necessarily a power of two.
 )
 

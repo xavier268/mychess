@@ -16,7 +16,29 @@ func TestSerialize(t *testing.T) {
 	}
 }
 
+func TestSerializeAll(t *testing.T) {
+	for range 10 {
+		b := Bitboard(rand.Uint64())
+		// Use iterator
+		bb1 := make([]Bitboard, 0, 50)
+		for sb := range b.AllSerialized {
+			bb1 = append(bb1, sb)
+		}
+		// compare with slice method
+		bb2 := b.Serialize()
+		if len(bb1) != len(bb2) {
+			t.Errorf("Wrong length got %d", len(bb1))
+		}
+		for i := range bb1 {
+			if bb1[i] != bb2[i] {
+				t.Errorf("Wrong bitboard got %d", bb1[i])
+			}
+		}
+	}
+}
+
 func verifySerialize(t *testing.T, b Bitboard) {
+
 	bbs := b.Serialize()
 	fmt.Printf("\n %d ", uint64(b))
 	if len(bbs) != bits.OnesCount64((uint64(b))) {
