@@ -8,6 +8,7 @@ import (
 func TestDisplayPosition(t *testing.T) {
 
 	fmt.Println(StartPosition.String())
+	StartPosition.PrintWithOverlay(1<<4 | 1<<60)
 	StartPosition.Dump()
 
 }

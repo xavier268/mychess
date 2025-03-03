@@ -66,6 +66,40 @@ func (p Position) String() string {
 	return buf.String()
 }
 
+// Print position with the provided overlay
+func (p Position) PrintWithOverlay(overlay Bitboard) {
+	before := "\033[41m" // before overlay
+	after := "\033[0m"   // after overlay
+
+	fmt.Printf("Overlay : 0x%x\n", uint64(overlay))
+	fmt.Printf("-- ")
+	for i := 'a'; i <= 'h'; i++ {
+		fmt.Printf("%c ", i)
+	}
+	fmt.Printf("--")
+
+	for r := 7; r >= 0; r-- {
+		fmt.Printf("\n%d  ", r+1)
+		for f := 0; f < 8; f++ {
+			if overlay.Get(Sq(r, f)) == 1 {
+				fmt.Printf("%s", before)
+				fmt.Printf("%c", PieceRepresentation[p.PieceAt(Sq(r, f))])
+				fmt.Printf("%s", after)
+			} else {
+				fmt.Printf("%c", PieceRepresentation[p.PieceAt(Sq(r, f))])
+			}
+			fmt.Printf(" ")
+		}
+		fmt.Printf(" %d", r+1)
+	}
+	fmt.Printf("\n-- ")
+	for i := 'a'; i <= 'h'; i++ {
+		fmt.Printf("%c ", i)
+	}
+	fmt.Printf("--")
+	fmt.Println()
+}
+
 // Piece at specified square.
 func (p Position) PieceAt(sq Square) Piece {
 
