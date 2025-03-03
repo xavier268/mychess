@@ -1,26 +1,11 @@
 package position
 
-// Special type to handle status word.
-// Status is made of 3 groups of bytes :
-//
-// byte 0-1 : white details
-//		bit 0-5 : King position
-//		bit 6 : can castle king side
-//		bit 7 : can castle king side
-//		bit 8 : white king under check
-//		bit 9-15 : ruf
-//
-// byte 2-3 : black details
-//		same format
-//
-// byte 4-5 : uint16 count global ply counter // max 65K !
-// byte 6 : uint8 count ply without capture or pawn move  // max 256
-// byte 7 :
-//	   	bit 1 : reversed colors vs actual physical color
-//	   	bit 2 : game over
-//	   	bit 3 : draw position
-//		bit 4-7 : ruf
+import (
+	"fmt"
+	"strings"
+)
 
+// Special type to handle status word.
 type Status struct {
 	Plies               uint16
 	PliesWithoutCapture uint8
@@ -48,12 +33,26 @@ func (st Status) Turn() uint8 {
 	return st.Game & 1
 }
 
-func (st Status) IsGameOver() bool {
+func (st Status) KingUnderThreat(color uint8) bool {
+	return st.Game&(1<<(color+1)) != 0
+}
+
+func (st Status) GameOver() bool {
 	return st.Game&0b1000 != 0
 }
 
-func (st Status) IsDraw() bool {
+func (st Status) Draw() bool {
 	return st.Game&0b0100 != 0
+}
+
+func (st Status) CanCastle(side uint8, castleBits uint8) bool {
+	return st.CastleBits[side]&castleBits != 0
+
+}
+
+func (st Status) SetKingThreatBit(side uint8, value uint8) Status {
+	st.Game = (st.Game & ^(1 << (side + 1))) | ((value & 1) << (side + 1))
+	return st
 }
 
 const (
@@ -62,3 +61,43 @@ const (
 	CanCastleQueenSide = 0b01000000
 	CanCastle          = CanCastleQueenSide | CanCastleKingSide
 )
+
+func (st Status) String() string {
+	buf := new(strings.Builder)
+	fmt.Fprintln(buf, "\n--- Status ---")
+	fmt.Fprintf(buf, "Turn: %d ( %d = WHITE, %d = BLACK )\n", st.Turn(), WHITE, BLACK)
+	fmt.Fprintf(buf, "Plies: %d\n", st.Plies)
+	fmt.Fprintf(buf, "Plies without capture: %d\n", st.PliesWithoutCapture)
+	if st.KingUnderThreat(WHITE) {
+		fmt.Fprintf(buf, "WHITE king under threat\n")
+	}
+	if st.KingUnderThreat(BLACK) {
+		fmt.Fprintf(buf, "BLACK king under threat\n")
+	}
+	if st.CanCastle(WHITE, CanCastleKingSide) {
+		fmt.Fprintf(buf, "WHITE can castle king side\n")
+	}
+	if st.CanCastle(WHITE, CanCastleQueenSide) {
+		fmt.Fprintf(buf, "WHITE can castle queen side\n")
+	}
+	if st.CanCastle(BLACK, CanCastleKingSide) {
+		fmt.Fprintf(buf, "BLACK can castle king side\n")
+	}
+	if st.CanCastle(BLACK, CanCastleQueenSide) {
+		fmt.Fprintf(buf, "BLACK can castle queen side\n")
+	}
+	if st.Draw() {
+		fmt.Fprintf(buf, "Game is a Draw\n")
+	}
+	if st.GameOver() {
+		fmt.Fprintf(buf, "Game is over !\n")
+	}
+	return buf.String()
+}
+
+func Bool2uint8(b bool) uint8 {
+	if b {
+		return 1
+	}
+	return 0
+}

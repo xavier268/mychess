@@ -1,6 +1,9 @@
 package position
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // ====================================
 // Square object
@@ -22,6 +25,7 @@ func Sq(rank, file int) Square {
 
 // create a square from the string expression, eg : "d2"
 func SqParse(s string) Square {
+	s = strings.ToLower(s)
 	if len(s) != 2 {
 		panic("invalid square string")
 	}

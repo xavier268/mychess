@@ -46,3 +46,11 @@ var StartPosition = Position{
 	knightOcc: StartKnightOcc,
 	status:    StartStatus,
 }
+
+// Update both Kings threats bits in the status word.
+func (p *Position) UpdateKingThreats(bt *BigTable) {
+	for side := uint8(0); side < 2; side++ {
+		ksq := p.status.KingPosition[side]
+		p.status = p.status.SetKingThreatBit(side, Bool2uint8(p.IsSquareAttacked(bt, ksq, side^1)))
+	}
+}

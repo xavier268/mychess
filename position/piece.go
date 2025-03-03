@@ -92,5 +92,5 @@ func (p Position) Dump() {
 	fmt.Println("Rook occ : ", p.rookOcc.String())
 	fmt.Println("White king sq : ", Bitboard(1<<p.status.KingPosition[WHITE]).String())
 	fmt.Println("Black king sq : ", Bitboard(1<<p.status.KingPosition[BLACK]).String())
-	fmt.Printf("Status : %64b\n", p.status)
+	fmt.Printf("Status : %s\n", p.status.String())
 }
