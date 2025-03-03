@@ -44,10 +44,10 @@ func (p Position) GetMoves(bt *BigTable, sq Square) (res Bitboard) {
 
 // Compute if the specified square is currently under attack from specified color (by)
 func (p Position) IsSquareAttacked(bt *BigTable, sq Square, by uint8) bool {
-	return (p.GetKnightMovesFromSquare(bt, by, sq)&p.colOcc[by]&p.knightOcc != 0) ||
-		(p.GetBishopMovesFromSquare(bt, by, sq)&p.colOcc[by]&p.bishopOcc != 0) ||
-		(p.GetRookMovesFromSquare(bt, by, sq)&p.colOcc[by]&p.rookOcc != 0) ||
-		(p.GetKingMovesFromSquare(bt, by, sq)&(1<<p.status.KingPosition[by]) != 0) ||
+	return (p.GetKnightMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.knightOcc != 0) ||
+		(p.GetBishopMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.bishopOcc != 0) ||
+		(p.GetRookMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.rookOcc != 0) ||
+		(p.GetKingMovesFromSquare(bt, 1^by, sq)&(1<<p.status.KingPosition[by]) != 0) ||
 		(p.GetPawnMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.pawnOcc != 0)
 }
 

@@ -25,4 +25,10 @@ func TestRandomPosition(t *testing.T) {
 	p.UpdateKingThreats(bt)
 	fmt.Println(p)
 	fmt.Println(p.status)
+
+	sq := SqParse("c2")
+	fmt.Println("Is C2 attacked bay WHITE :", p.IsSquareAttacked(bt, sq, WHITE))
+	fmt.Println("Is C2 attacked bay BLACK :", p.IsSquareAttacked(bt, sq, BLACK))
+	fmt.Println("C2 Bishop BLACK attack set ", p.GetBishopMovesFromSquare(bt, BLACK, sq).String())
+	fmt.Println("C2 Bishop WHITE attack set ", p.GetBishopMovesFromSquare(bt, WHITE, sq).String())
 }
