@@ -9,11 +9,6 @@ import (
 // Piece based approach (printing & testing only)
 // =======================
 
-const (
-	WHITE = 1
-	BLACK = -1
-)
-
 type Piece int16
 
 const (
@@ -75,35 +70,27 @@ func (p Position) String() string {
 func (p Position) PieceAt(sq Square) Piece {
 
 	//handle kings differently
-	if sq == p.GetBlackKingSquare() {
-		return -KING
-	}
-	if sq == p.GetWhiteKingSquare() {
+	if sq == p.status.KingPosition[WHITE] {
 		return KING
+	}
+	if sq == p.status.KingPosition[BLACK] {
+		return -KING
 	}
 
 	// Normal pieces
-	color := Piece(p.whiteOcc.Get(sq) - p.blackOcc.Get(sq))
+	color := Piece(p.colOcc[WHITE].Get(sq) - p.colOcc[BLACK].Get(sq))
 	piece := Piece(p.pawnOcc.Get(sq) | p.knightOcc.Get(sq)<<2 | p.bishopOcc.Get(sq)<<3 | p.rookOcc.Get(sq)<<4)
 	return color * piece
 }
 
 func (p Position) Dump() {
-	fmt.Println("White occ : ", p.whiteOcc.String())
-	fmt.Println("Black occ : ", p.blackOcc.String())
+	fmt.Println("White occ : ", p.colOcc[WHITE].String())
+	fmt.Println("Black occ : ", p.colOcc[BLACK].String())
 	fmt.Println("Pawn occ : ", p.pawnOcc.String())
 	fmt.Println("Knight occ : ", p.knightOcc.String())
 	fmt.Println("Bishop occ : ", p.bishopOcc.String())
 	fmt.Println("Rook occ : ", p.rookOcc.String())
-	fmt.Println("White king sq : ", Bitboard(1<<p.GetWhiteKingSquare()).String())
-	fmt.Println("Black king sq : ", Bitboard(1<<p.GetBlackKingSquare()).String())
+	fmt.Println("White king sq : ", Bitboard(1<<p.status.KingPosition[WHITE]).String())
+	fmt.Println("Black king sq : ", Bitboard(1<<p.status.KingPosition[BLACK]).String())
 	fmt.Printf("Status : %64b\n", p.status)
-}
-
-func (p Position) GetWhiteKingSquare() Square {
-	return Square(p.status.GetWhiteKingSquare())
-}
-
-func (p Position) GetBlackKingSquare() Square {
-	return Square(p.status.GetBlackKingSquare())
 }

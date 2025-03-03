@@ -24,49 +24,6 @@ func GenerateBishopMaskSq(sq Square) Bitboard {
 
 }
 
-func GenerateWhitePawnMoveMaskSq(sq Square) Bitboard {
-	r, f := sq.RF()
-	b := Bitboard(0)
-
-	if r < 7 {
-		// Moves
-		b = b.Set(Sq(r+1, f))
-		if r == 1 {
-			b = b.Set(Sq(r+2, f))
-		}
-	}
-	return b
-}
-
-func GenerateWhitePawnCaptureMaskSq(sq Square) Bitboard {
-	r, f := sq.RF()
-	b := Bitboard(0)
-	// Captures
-	if r < 7 {
-		if f > 0 {
-			b = b.Set(Sq(r+1, f-1))
-		}
-		if f < 7 {
-			b = b.Set(Sq(r+1, f+1))
-		}
-	}
-	return b
-}
-
-// INUTILE ?! A voir ... TODO
-/*
-func GenerateWhitePawnAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
-	res = make(map[uint64]uint64, 1<<6)         // start small
-	cmask := GenerateWhitePawnCaptureMaskSq(sq) // mask for the square occupancy
-	mmask := GenerateWhitePawnMoveMaskSq(sq)    // mask for the move occupancy
-	// generate all possible occupancy within the above merged masks
-	for occ := range (cmask | mmask).AllBitCombinations {
-		res[uint64(occ)] = uint64((cmask & occ) | (mmask & (^occ)))
-	}
-	return res
-}
-*/
-
 // Generate attack set for knight positions
 func GenerateKnightAttacksSq(sq Square) Bitboard {
 	r, f := sq.RF()
@@ -237,4 +194,62 @@ func GenerateBishopAttacksMagicMapSq(sq Square) (res map[uint64]uint64) {
 		res[uint64(occ)] = uint64(generateRookAttackSetSqOcc(sq, occ))
 	}
 	return res
+}
+
+func GenerateWhitePawnMoveMaskSq(sq Square) Bitboard {
+	r, f := sq.RF()
+	b := Bitboard(0)
+
+	if r < 7 {
+		// Moves
+		b = b.Set(Sq(r+1, f))
+		if r == 1 {
+			b = b.Set(Sq(r+2, f))
+		}
+	}
+	return b
+}
+
+func GenerateBlackPawnMoveMaskSq(sq Square) Bitboard {
+	r, f := sq.RF()
+	b := Bitboard(0)
+
+	if r > 0 {
+		// Moves
+		b = b.Set(Sq(r-1, f))
+		if r == 6 {
+			b = b.Set(Sq(r-2, f))
+		}
+	}
+	return b
+}
+
+func GenerateWhitePawnCaptureMaskSq(sq Square) Bitboard {
+	r, f := sq.RF()
+	b := Bitboard(0)
+	// Captures
+	if r < 7 {
+		if f > 0 {
+			b = b.Set(Sq(r+1, f-1))
+		}
+		if f < 7 {
+			b = b.Set(Sq(r+1, f+1))
+		}
+	}
+	return b
+}
+
+func GenerateBlackPawnCaptureMaskSq(sq Square) Bitboard {
+	r, f := sq.RF()
+	b := Bitboard(0)
+	// Captures
+	if r > 0 {
+		if f > 0 {
+			b = b.Set(Sq(r-1, f-1))
+		}
+		if f < 7 {
+			b = b.Set(Sq(r-1, f+1))
+		}
+	}
+	return b
 }

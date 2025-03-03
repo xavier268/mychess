@@ -20,46 +20,45 @@ package position
 //	   	bit 2 : game over
 //	   	bit 3 : draw position
 //		bit 4-7 : ruf
-type Status uint64
+
+type Status struct {
+	Plies               uint16
+	PliesWithoutCapture uint8
+	KingPosition        [2]Square
+	CastleBits          [2]uint8
+	// Bit 0 : who should play ?
+	// Bit 1 : white king under threat
+	// Bit 2 : black king under threat
+	// Bit 3 : game over (no more legal moves or draw)
+	// Bit 4 : draw
+	Game uint8
+}
+
+// Status at start of game
+var StartStatus = Status{
+	Plies:               0,
+	PliesWithoutCapture: 0,
+	KingPosition:        [2]Square{4, 60},
+	CastleBits:          [2]uint8{CanCastle, CanCastle},
+	Game:                0,
+}
+
+// Who should move from here ?
+func (st Status) Turn() uint8 {
+	return st.Game & 1
+}
+
+func (st Status) IsGameOver() bool {
+	return st.Game&0b1000 != 0
+}
+
+func (st Status) IsDraw() bool {
+	return st.Game&0b0100 != 0
+}
 
 const (
+	// Castle bits
 	CanCastleKingSide  = 0b10000000
 	CanCastleQueenSide = 0b01000000
 	CanCastle          = CanCastleQueenSide | CanCastleKingSide
 )
-
-func (st Status) GetWhiteKingSquare() Square {
-	return Square(st & 0x3F)
-}
-func (st Status) SetWhiteKingSquare(sq Square) Status {
-	return st & ^Status(0x3F) | Status(sq)
-}
-
-func (st Status) GetBlackKingSquare() Square {
-	return Square((st >> 16) & 0x3F)
-}
-
-func (st Status) SetBlackKingSquare(sq Square) Status {
-	return (st & ^Status(0x3F<<16)) | Status(sq)<<16
-}
-
-func (st Status) GetWhiteCastleBits() uint8 {
-	return uint8(st & 0xC0)
-}
-
-func (st Status) GetBlackCastleBits() uint8 {
-	return uint8((st >> 16) & 0xC0)
-}
-
-func (st Status) ReverseSwitchBit() Status {
-	return st ^ Status(1<<56)
-}
-
-func (st Status) VMirror() Status {
-	b0 := Status(uint8(st.GetBlackKingSquare().VMirror()) | (st.GetBlackCastleBits()))
-	b1 := (st >> 8) & 0xFF
-	b2 := Status(uint8(st.GetWhiteKingSquare().VMirror()) | (st.GetWhiteCastleBits()))
-	b3 := (st >> 24) & 0xFF
-	rest := (st.ReverseSwitchBit() &^ 0x_FFFF_FFFF)
-	return Status(b0 | b1<<8 | b2<<16 | b3<<24 | rest)
-}

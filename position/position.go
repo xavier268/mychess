@@ -1,10 +1,14 @@
 package position
 
+// Constant to indicate turn (who is expected to play ) and index the masks and status.
+const (
+	WHITE = 0
+	BLACK = 1
+)
+
 type Position struct {
-	// all pieces together, EXCLUDING en-passant position, but INCLUDING kings
-	whiteOcc Bitboard
-	// all pieces together
-	blackOcc Bitboard
+	// // Occupancies for each side, all actual pieces (king INCLUDED), but en passant marker not included
+	colOcc [2]Bitboard
 	// all colors together
 	// en passant is indicated as rank 0 for the white pawn (there can never be a black pawn here because of promotion) - or in the status data ?
 	pawnOcc Bitboard
@@ -17,7 +21,6 @@ type Position struct {
 
 	// queen appears as both a rook and a bishop
 	// king positions derived from status data below
-
 	status Status
 }
 
@@ -30,33 +33,16 @@ const (
 	StartBishopOcc Bitboard = (1 << 2) | (1 << 5) | (1 << (2 + 56)) | (1 << (5 + 56))
 	StartQueenOcc  Bitboard = 1<<3 | (1 << (3 + 56))
 	//StartKingOcc   Bitboard = 1<<4 | (1 << (4 + 56))
-
 )
 
 var StartPosition = Position{
-	whiteOcc:  StartWhiteOcc,
-	blackOcc:  StartBlackOcc,
+	colOcc: [2]Bitboard{
+		StartWhiteOcc,
+		StartBlackOcc,
+	},
 	pawnOcc:   StartPawnOcc,
 	rookOcc:   StartRookOcc | StartQueenOcc,
 	bishopOcc: StartBishopOcc | StartQueenOcc,
 	knightOcc: StartKnightOcc,
-	status: (CanCastle | 4) | // white king position
-		(CanCastle|60)<<16, // black king position
-}
-
-// Change side ...
-func (p Position) VMirror() Position {
-
-	pp := Position{
-		whiteOcc:  p.blackOcc.VMirror(),
-		blackOcc:  p.whiteOcc.VMirror(),
-		pawnOcc:   p.pawnOcc.VMirror(),
-		rookOcc:   p.rookOcc.VMirror(),
-		bishopOcc: p.bishopOcc.VMirror(),
-		knightOcc: p.knightOcc.VMirror(),
-		status:    p.status.VMirror(),
-	}
-
-	return pp
-
+	status:    StartStatus,
 }

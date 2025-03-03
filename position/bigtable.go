@@ -15,10 +15,10 @@ type BigTable struct {
 
 	// Sliding pieces require a mask
 	// Queen is a combination of bishop & rook
-	RookMask             [64]Bitboard
-	BishopMask           [64]Bitboard
-	WhitePawnCaptureMask [64]Bitboard
-	WhitePawnMoveMask    [64]Bitboard
+	RookMask        [64]Bitboard
+	BishopMask      [64]Bitboard
+	PawnCaptureMask [2][64]Bitboard
+	PawnMoveMask    [2][64]Bitboard
 
 	// Complex attack sets are stored in a (single) MagicMap
 	// Tables are :
@@ -40,14 +40,15 @@ func NewBigTable() *BigTable {
 		b.KnightAttacks[sq] = GenerateKnightAttacksSq(sq)
 		b.RookMask[sq] = GenerateRookMaskSq(sq)
 		b.BishopMask[sq] = GenerateBishopMaskSq(sq)
-		b.WhitePawnCaptureMask[sq] = GenerateWhitePawnCaptureMaskSq(sq)
-		b.WhitePawnMoveMask[sq] = GenerateWhitePawnMoveMaskSq(sq)
+		b.PawnCaptureMask[WHITE][sq] = GenerateWhitePawnCaptureMaskSq(sq)
+		b.PawnCaptureMask[BLACK][sq] = GenerateBlackPawnCaptureMaskSq(sq)
+		b.PawnMoveMask[WHITE][sq] = GenerateWhitePawnMoveMaskSq(sq)
+		b.PawnMoveMask[BLACK][sq] = GenerateBlackPawnMoveMaskSq(sq)
 	}
 
 	// Prepare table entries into the MagicMap
 	// 0-  rookattacksets
 	// 1-  bishop attack sets
-	// 2-  whitepawn attack sets
 	tes := make([]magic.TableEntry, 0, 256)
 	var te magic.TableEntry
 	for sq := Square(0); sq < 64; sq++ {
@@ -57,9 +58,6 @@ func NewBigTable() *BigTable {
 		// bishop - table 1
 		te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 1)), Values: GenerateBishopAttacksMagicMapSq(sq)}
 		tes = append(tes, te)
-		// white pawn - table 2
-		// te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 2)), Values: GenerateWhitePawnAttacksMagicMapSq(sq)}
-		// tes = append(tes, te)
 	}
 	st := magic.InitMagicMap(b.MagicMap, tes...)
 	fmt.Println(st.String())
