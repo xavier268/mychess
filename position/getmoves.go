@@ -26,7 +26,7 @@ func (p Position) GetBishopMovesFromSquare(bt *BigTable, turn uint8, sq Square) 
 
 func (p Position) GetPawnMovesFromSquare(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	return (bt.PawnCaptureMask[turn][sq] & p.colOcc[1^StartPosition.status.Turn()]) | // capture ONLY if opponent
+	return (bt.PawnCaptureMask[turn][sq] & p.colOcc[1^turn]) | // capture ONLY if opponent
 		(bt.PawnMoveMask[turn][sq] & ^occ) // Move ONLY if empty
 }
 
