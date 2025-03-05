@@ -104,18 +104,10 @@ func (p Position) PrintWithOverlay(overlay Bitboard) {
 // Piece at specified square.
 func (p Position) PieceAt(sq Square) Piece {
 
-	//handle kings differently
-	if sq == p.status.GetKingPosition(WHITE) {
-		return KING
-	}
-	if sq == p.status.GetKingPosition(BLACK) {
-		return -KING
-	}
-
-	// Normal pieces
+	// NB : King have an occupancy, while en passant do not !
 	color := Piece(p.colOcc[WHITE].Get(sq) - p.colOcc[BLACK].Get(sq))
 	switch {
-	case p.colOcc[WHITE].Get(sq) == 0 && p.colOcc[BLACK].Get(sq) == 0:
+	case color == 0:
 		return EMPTY
 	case p.pawnOcc.Get(sq) == 1:
 		return color * PAWN

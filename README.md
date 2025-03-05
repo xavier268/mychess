@@ -21,7 +21,7 @@ Number of occupancies vs. Number of attack sets.
 
 ## Changements à faire 
 
-Need more tests for IsSquaredAttacked ?
+Implementer make et les moves.
 
 ## Poursuite de la conception
 
