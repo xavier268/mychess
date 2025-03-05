@@ -34,7 +34,7 @@ func (p Position) GetPawnMovesFromSquare(bt *BigTable, turn uint8, sq Square) (r
 
 // All moves from the specified position in a single bitboard
 func (p Position) GetMoves(bt *BigTable, sq Square) (res Bitboard) {
-	turn := p.status.Turn()
+	turn := p.status.GetTurn()
 	return p.GetKnightMovesFromSquare(bt, turn, sq) |
 		p.GetBishopMovesFromSquare(bt, turn, sq) |
 		p.GetKingMovesFromSquare(bt, turn, sq) |
@@ -47,7 +47,7 @@ func (p Position) IsSquareAttacked(bt *BigTable, sq Square, by uint8) bool {
 	return (p.GetKnightMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.knightOcc != 0) ||
 		(p.GetBishopMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.bishopOcc != 0) ||
 		(p.GetRookMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.rookOcc != 0) ||
-		(p.GetKingMovesFromSquare(bt, 1^by, sq)&(1<<p.status.KingPosition[by]) != 0) ||
+		(p.GetKingMovesFromSquare(bt, 1^by, sq)&(1<<p.status.GetKingPosition(by)) != 0) ||
 		(p.GetPawnMovesFromSquare(bt, 1^by, sq)&p.colOcc[by]&p.pawnOcc != 0)
 }
 

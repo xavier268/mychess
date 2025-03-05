@@ -56,11 +56,12 @@ func (p *Position) AddQueen(side uint8, queens ...string) *Position {
 	return p
 }
 
+// ... and sets castling rights to NONE !
 func (p *Position) AddKing(side uint8, kingsq string) *Position {
 	side = side & 1
-	sq := SqParse(kingsq)
+	sq := uint8(SqParse(kingsq))
 	p.colOcc[side] |= 1 << sq
-	p.status.KingPosition[side] = sq
+	p.status.KingStatus[side] = sq
 	return p
 }
 
@@ -72,8 +73,9 @@ func (p *Position) SetEnPassant(side uint8, where string) *Position {
 	return p
 }
 
+// Add specify castling rights
 func (p *Position) SetCastle(side uint8, castleBits uint8) *Position {
 	side = side & 1
-	p.status.CastleBits[side] |= (castleBits & CanCastle)
+	p.status.KingStatus[side] |= (castleBits & CanCastle)
 	return p
 }

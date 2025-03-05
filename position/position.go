@@ -32,7 +32,6 @@ const (
 	StartKnightOcc Bitboard = 0x42 | (0x42 << 56)
 	StartBishopOcc Bitboard = (1 << 2) | (1 << 5) | (1 << (2 + 56)) | (1 << (5 + 56))
 	StartQueenOcc  Bitboard = 1<<3 | (1 << (3 + 56))
-	//StartKingOcc   Bitboard = 1<<4 | (1 << (4 + 56))
 )
 
 var StartPosition = Position{
@@ -45,12 +44,4 @@ var StartPosition = Position{
 	bishopOcc: StartBishopOcc | StartQueenOcc,
 	knightOcc: StartKnightOcc,
 	status:    StartStatus,
-}
-
-// Update both Kings threats bits in the status word.
-func (p *Position) UpdateKingThreats(bt *BigTable) {
-	for side := uint8(0); side < 2; side++ {
-		ksq := p.status.KingPosition[side]
-		p.status = p.status.SetKingThreatBit(side, Bool2uint8(p.IsSquareAttacked(bt, ksq, side^1)))
-	}
 }

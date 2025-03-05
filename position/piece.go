@@ -104,10 +104,10 @@ func (p Position) PrintWithOverlay(overlay Bitboard) {
 func (p Position) PieceAt(sq Square) Piece {
 
 	//handle kings differently
-	if sq == p.status.KingPosition[WHITE] {
+	if sq == p.status.GetKingPosition(WHITE) {
 		return KING
 	}
-	if sq == p.status.KingPosition[BLACK] {
+	if sq == p.status.GetKingPosition(BLACK) {
 		return -KING
 	}
 
@@ -124,7 +124,7 @@ func (p Position) Dump() {
 	fmt.Println("Knight occ : ", p.knightOcc.String())
 	fmt.Println("Bishop occ : ", p.bishopOcc.String())
 	fmt.Println("Rook occ : ", p.rookOcc.String())
-	fmt.Println("White king sq : ", Bitboard(1<<p.status.KingPosition[WHITE]).String())
-	fmt.Println("Black king sq : ", Bitboard(1<<p.status.KingPosition[BLACK]).String())
+	fmt.Println("White king sq : ", Bitboard(1<<p.status.GetKingPosition(WHITE)).String())
+	fmt.Println("Black king sq : ", Bitboard(1<<p.status.GetKingPosition(BLACK)).String())
 	fmt.Printf("Status : %s\n", p.status.String())
 }

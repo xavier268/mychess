@@ -3,6 +3,7 @@ package position
 import (
 	"fmt"
 	"testing"
+	"unsafe"
 )
 
 func TestDisplayPosition(t *testing.T) {
@@ -10,6 +11,15 @@ func TestDisplayPosition(t *testing.T) {
 	fmt.Println(StartPosition.String())
 	StartPosition.PrintWithOverlay(1<<4 | 1<<60)
 	StartPosition.Dump()
+
+}
+
+func TestSizes(t *testing.T) {
+	fmt.Printf("Size of Position : %d bytes\n", uint64(unsafe.Sizeof(Position{})))
+	fmt.Printf("Size of Status : %d bytes\n", uint64(unsafe.Sizeof(Status{})))
+	fmt.Printf("Size of ZobristTable : %d bytes\n", uint64(unsafe.Sizeof(ZobristTable{})))
+
+	fmt.Printf("Size of BigTable : %d bytes\n", uint64(unsafe.Sizeof(BigTable{})))
 
 }
 
@@ -23,7 +33,6 @@ func TestRandomPosition(t *testing.T) {
 		AddQueen(BLACK, "e4").
 		AddRook(BLACK, "h8").
 		AddPawn(BLACK, "a7", "b6").AddPawn(WHITE, "d2", "e3", "h5")
-	p.UpdateKingThreats(bt)
 	fmt.Println(p)
 	fmt.Println(p.status)
 
