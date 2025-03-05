@@ -9,16 +9,17 @@ import (
 // Piece based approach (printing & testing only)
 // =======================
 
-type Piece int16
+type Piece int8
 
 const (
-	EMPTY  Piece = 0
-	PAWN   Piece = 1
-	KNIGHT Piece = 1 << 2
-	BISHOP Piece = 1 << 3
-	ROOK   Piece = 1 << 4
-	QUEEN  Piece = ROOK | BISHOP
-	KING   Piece = 1 << 5
+	// This structure is used to identify the Piece efficiently in PieceAt.
+	EMPTY Piece = iota
+	PAWN
+	KNIGHT
+	BISHOP
+	ROOK
+	QUEEN
+	KING
 )
 
 var PieceRepresentation = map[Piece]rune{
@@ -113,8 +114,25 @@ func (p Position) PieceAt(sq Square) Piece {
 
 	// Normal pieces
 	color := Piece(p.colOcc[WHITE].Get(sq) - p.colOcc[BLACK].Get(sq))
-	piece := Piece(p.pawnOcc.Get(sq) | p.knightOcc.Get(sq)<<2 | p.bishopOcc.Get(sq)<<3 | p.rookOcc.Get(sq)<<4)
-	return color * piece
+	switch {
+	case p.colOcc[WHITE].Get(sq) == 0 && p.colOcc[BLACK].Get(sq) == 0:
+		return EMPTY
+	case p.pawnOcc.Get(sq) == 1:
+		return color * PAWN
+	case p.knightOcc.Get(sq) == 1:
+		return color * KNIGHT
+	case p.rookOcc.Get(sq) == 1 && p.bishopOcc.Get(sq) == 1:
+		return color * QUEEN
+	case p.bishopOcc.Get(sq) == 1:
+		return color * BISHOP
+	case p.rookOcc.Get(sq) == 1:
+		return color * ROOK
+	case sq == p.status.GetKingPosition(WHITE):
+		return KING
+	case sq == p.status.GetKingPosition(BLACK):
+		return -KING
+	}
+	panic("internal error")
 }
 
 func (p Position) Dump() {
