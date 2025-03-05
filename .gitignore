@@ -23,3 +23,7 @@ go.work.sum
 
 # env file
 .env
+
+## test bin files
+*_test.bin
+magic/magicmap_test.bin
