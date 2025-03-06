@@ -21,6 +21,9 @@ Number of occupancies vs. Number of attack sets.
 
 ## Changements à faire 
 
+Tester les roques.
+Revoir le stockage du en-passant ? Faire des setters/getters pour turn et en passant.
+
 Implementer make et les moves.
 
 ## Poursuite de la conception

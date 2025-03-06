@@ -11,6 +11,7 @@ type Status struct {
 	// Bit 6-7 : castle bits
 	KingStatus [2]uint8
 	// Bit 0 : 	Who should play WHITE/BLACK
+	// Bit 1-4 : en passant file
 	TurnStatus uint8
 }
 
@@ -33,6 +34,10 @@ var StartStatus = Status{
 // Who should move from here ?
 func (st Status) GetTurn() uint8 {
 	return st.TurnStatus & 1
+}
+
+func (st *Status) SetTurn(turn uint8) {
+	st.TurnStatus = (st.TurnStatus & 0b1110) | (turn & 1)
 }
 
 func (st Status) CanCastle(side uint8, castleBits uint8) bool {
