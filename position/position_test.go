@@ -6,6 +6,17 @@ import (
 	"unsafe"
 )
 
+// Big table for testing
+var bt = NewBigTable()
+
+// Predfined random test positions
+var rpt1 = new(Position).
+	AddKing(WHITE, "c2").AddKing(BLACK, "c7").
+	AddBishop(WHITE, "a2", "a3").
+	AddQueen(BLACK, "e4").
+	AddRook(BLACK, "h8").
+	AddPawn(BLACK, "a7", "b6").AddPawn(WHITE, "d2", "e3", "h5")
+
 func TestDisplayPosition(t *testing.T) {
 
 	fmt.Println(StartPosition.String())
@@ -25,16 +36,8 @@ func TestSizes(t *testing.T) {
 
 func TestRandomPosition(t *testing.T) {
 
-	bt := NewBigTable()
-
-	p := new(Position).
-		AddKing(WHITE, "c2").AddKing(BLACK, "c7").
-		AddBishop(WHITE, "a2", "a3").
-		AddQueen(BLACK, "e4").
-		AddRook(BLACK, "h8").
-		AddPawn(BLACK, "a7", "b6").AddPawn(WHITE, "d2", "e3", "h5")
-	fmt.Println(p)
-	fmt.Println(p.status)
+	fmt.Println(rpt1)
+	fmt.Println(rpt1.status)
 
 	// Verify attacks ...
 
@@ -66,14 +69,14 @@ func TestRandomPosition(t *testing.T) {
 
 	for s, res := range testSqu {
 		sq := SqParse(s)
-		fmt.Println(p)
-		fmt.Println("Square", sq.String(), "is attacked by WHITE :", p.IsSquareAttacked(bt, sq, WHITE))
-		fmt.Println("Square", sq.String(), "is attacked by BLACK :", p.IsSquareAttacked(bt, sq, BLACK))
-		if p.IsSquareAttacked(bt, sq, WHITE) != res.w {
-			t.Error("Square", sq.String(), "is attacked by WHITE :", p.IsSquareAttacked(bt, sq, WHITE))
+		fmt.Println(rpt1)
+		fmt.Println("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(bt, sq, WHITE))
+		fmt.Println("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(bt, sq, BLACK))
+		if rpt1.IsSquareAttacked(bt, sq, WHITE) != res.w {
+			t.Error("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(bt, sq, WHITE))
 		}
-		if p.IsSquareAttacked(bt, sq, BLACK) != res.b {
-			t.Error("Square", sq.String(), "is attacked by BLACK :", p.IsSquareAttacked(bt, sq, BLACK))
+		if rpt1.IsSquareAttacked(bt, sq, BLACK) != res.b {
+			t.Error("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(bt, sq, BLACK))
 		}
 	}
 
