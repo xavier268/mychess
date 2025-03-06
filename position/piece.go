@@ -38,6 +38,10 @@ var PieceRepresentation = map[Piece]rune{
 	-KING:   'k',
 }
 
+func (p Piece) String() string {
+	return fmt.Sprintf("%c", PieceRepresentation[p])
+}
+
 // Print position.
 // Rank 8 is printed first.
 func (p Position) String() string {
