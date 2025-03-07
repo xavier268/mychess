@@ -62,6 +62,30 @@ func (s Square) HMirror() Square {
 	return s ^ 7
 }
 
+// no bound checks !
+func (sq Square) North() Square {
+	return (sq + 8) & 63
+}
+
+// no bound checks !
+func (sq Square) South() Square {
+	return (sq - 8) & 63
+}
+
+// no bound checks !
+func (sq Square) East() Square {
+	return (sq + 1) & 63
+}
+
+// no bound checks !
+func (sq Square) West() Square {
+	return (sq - 1) & 63
+}
+
+func (sq Square) Bitboard() Bitboard {
+	return 1 << sq
+}
+
 // ========================
 // Quadrant manipulation
 // =========================
