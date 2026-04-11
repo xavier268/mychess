@@ -71,6 +71,7 @@ type Position struct {
     bishopOcc Bitboard     // squares with a bishop or queen (either color)
     knightOcc Bitboard     // squares with a knight (either color)
     status    Status
+    Hash      uint64       // Zobrist hash; 0 = uninitialized
 }
 ```
 
@@ -90,7 +91,7 @@ a bit is set regardless of which player owns the piece.
 To determine the color of a piece at a given square, intersect with `colOcc`:
 
 ```
-white rooks = rookOcc & colOcc[WHITE]   (excluding bishops, i.e. queens too)
+white rooks = rookOcc & colOcc[WHITE]   (excluding queens)
 ```
 
 ### 3.3 Queens — implicit representation
@@ -169,6 +170,12 @@ is `Sq(5, file±1)` (one rank above the black pawn's current position).
 
 **Clearing** (`ResetEnPassantFlag`): `pawnOcc &= colOcc[WHITE] | colOcc[BLACK]`
 — removes all phantom bits in one operation.
+
+**Placement guard**: the phantom is only written when its target square is
+unoccupied.  If a piece already sits on rank 0/7 at the same file (e.g. the
+king on e1 while the e-pawn double-pushes), the phantom would be masked out
+by `colOcc` and would corrupt `pawnOcc` on undo; it is silently skipped and
+the en passant opportunity for that specific case is not recorded.
 
 ---
 
@@ -275,23 +282,134 @@ expanded into four moves (Q/R/B/N) inline.  Castling is appended via
 
 Moves are returned sorted by a simple capture-value score (captures first).
 
+**Pseudo-legal only**: moves that leave the own king in check are not filtered.
+The caller is responsible for verifying legality, typically with:
+
+```go
+func (p Position) IsLegal(bt *BigTable, m Move) bool {
+    after, _ := p.DoMove(m)
+    turn := p.status.GetTurn()
+    return !after.IsSquareAttacked(bt, after.status.GetKingPosition(turn), 1-turn)
+}
+```
+
 ---
 
-## 9. Zobrist hashing
+## 9. DoMove / UndoMove
 
-`ZobristTable` assigns a random 64-bit key to every possible state of each
-bitboard bit, plus king squares, castling rights, and turn.  The position hash
-is the XOR of all active keys.  This enables O(1) incremental hash updates
-after a move: only XOR in/out the keys for the bits that changed.
+### 9.1 The `Move` struct
+
+```go
+type Move struct {
+    From, To  Square
+    Promotion Piece   // EMPTY | CASTLEMOVE | KNIGHT | BISHOP | ROOK | QUEEN
+
+    // Populated by DoMove; required by UndoMove:
+    Captured      Piece   // signed: +white, -black, EMPTY = none
+    CaptureSquare Square  // == To, except en passant (where it's the pawn's square)
+    PrevStatus    Status  // full Status snapshot before the move
+    PrevEPFile    int8    // file of the EP phantom before the move; -1 = none
+    PrevHash      uint64  // Zobrist hash before the move
+}
+```
+
+`GetMoveList` fills only `From`, `To`, `Promotion`, and `Score`.
+`DoMove` fills all undo fields in the returned `Move`.
+
+### 9.2 `DoMove(m Move) (Position, Move)`
+
+Returns the new position **and** the move enriched with undo fields.  The
+returned `Move` must be passed intact to `UndoMove`.
+
+Handles five code paths:
+
+| `m.Promotion` | Path |
+|---|---|
+| `CASTLEMOVE` | Move king + rook; clear castle rights for that color |
+| `KNIGHT/BISHOP/ROOK/QUEEN` | Remove pawn at source; place promoted piece at dest; handle capture |
+| `EMPTY` — pawn changes file to empty square | En passant: remove captured pawn from adjacent square |
+| `EMPTY` — normal capture | Remove captured piece at dest |
+| `EMPTY` — quiet move | Move piece; handle king/rook side-effects |
+
+After every path, if a rook was captured, the opponent's corresponding castle
+right is revoked.
+
+**EP phantom lifecycle inside DoMove**:
+
+1. Old phantom is XORed out of the hash, then cleared from `pawnOcc`.
+2. If the move is a double pawn push and the phantom target square is free, the
+   new phantom is set in `pawnOcc` and XORed into the hash.
+
+### 9.3 `UndoMove(m Move) Position`
+
+Restores the position exactly.  Key points:
+
+- `pp.status = m.PrevStatus` restores turn, king squares, and all castle bits
+  in a single assignment.
+- `pp.Hash = m.PrevHash` restores the Zobrist hash atomically — no
+  re-computation.
+- The EP phantom is restored by clearing all current phantoms, then
+  re-inserting the one recorded in `m.PrevEPFile` (if any).
 
 ---
 
-## 10. Memory layout summary
+## 10. Zobrist hashing
+
+### 10.1 Table layout (`ZobristTable`)
+
+```go
+ZobristBitboards [6][64]uint64   // index: 0=colOcc[W], 1=colOcc[B],
+                                 //        2=pawnOcc, 3=rookOcc,
+                                 //        4=bishopOcc, 5=knightOcc
+ZobristKing      [2][64]uint64   // king square stored in Status
+ZobristCastling  [2][4]uint64    // castle-bits index = GetCastleBits()>>6 → 0–3
+ZobristTurn      uint64          // XORed in when it is BLACK's turn
+```
+
+`DefaultZT` is a package-level singleton initialised with `crypto/rand` at
+startup.  `StartPosition.Hash` is seeded from it via `init()`.
+
+### 10.2 Incremental update strategy in `DoMove`
+
+Status-dependent components (castle bits, king squares) use a **bracket**
+pattern:
+
+```
+XOR out: ZobristCastling[W][old], ZobristCastling[B][old],
+         ZobristKing[W][old],     ZobristKing[B][old]
+   ... make all bitboard and Status changes ...
+XOR in:  ZobristCastling[W][new], ZobristCastling[B][new],
+         ZobristKing[W][new],     ZobristKing[B][new]
+```
+
+This means castle-right revocations (own rook move, opponent rook capture)
+require no special-case hash code — `revokeRookCastle` modifies `pp.status`
+and the closing bracket picks up the new value automatically.
+
+Everything else is XORed **inline** as each bitboard changes:
+
+| Event | Keys XORed |
+|---|---|
+| Turn flip | `ZobristTurn` (unconditional — turn always changes) |
+| EP phantom removed | `ZobristBitboards[pawnOcc][phantomSq]` (opening bracket) |
+| Piece moves color c, from→to | `ZobristBitboards[c][from] ^ ZobristBitboards[c][to]` |
+| Piece type changes at sq | `ZobristBitboards[typeIdx][sq]` (once per sq) |
+| New EP phantom created | `ZobristBitboards[pawnOcc][phantomSq]` |
+
+### 10.3 Full recomputation — `HashPosition(p)`
+
+Used to establish the hash for any position not reached via `DoMove` (e.g.
+positions loaded from FEN).  O(popcount of all bitboards).
+
+---
+
+## 11. Memory layout summary
 
 | Structure | Static size | Runtime (heap) |
 |---|---|---|
-| `Position` | 56 bytes | 0 (value type) |
+| `Position` | 64 bytes | 0 (value type) |
 | `Status` | 3 bytes | — |
+| `Move` | 48 bytes | 0 (value type) |
 | `BigTable` (struct shell) | 7 168 bytes | ~304 KB total |
 | `ZobristTable` | 4 168 bytes | 0 |
 
