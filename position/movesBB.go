@@ -10,24 +10,47 @@ func (p Position) GetKingMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) 
 }
 
 func (p Position) GetRookMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
-
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	key := occ & bt.RookMask[sq]
-	attacks := Bitboard(bt.Get(uint8(SquareTable(sq, 0)), uint64(key)))
-	return attacks & ^p.colOcc[turn]
+	rankAttacks := bt.RookAttackSetRank[sq][occ&bt.RookMaskRank[sq]]
+	fileAttacks := bt.RookAttackSetFile[sq][occ&bt.RookMaskFile[sq]]
+	return (rankAttacks | fileAttacks) & ^p.colOcc[turn]
 }
 
 func (p Position) GetBishopMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	key := occ & bt.BishopMask[sq]
-	attacks := Bitboard(bt.Get(uint8(SquareTable(sq, 1)), uint64(key)))
-	return attacks & ^p.colOcc[turn]
+	neAttacks := bt.BishopAttackSetNE[sq][occ&bt.BishopMaskNE[sq]]
+	nwAttacks := bt.BishopAttackSetNW[sq][occ&bt.BishopMaskNW[sq]]
+	return (neAttacks | nwAttacks) & ^p.colOcc[turn]
 }
 
+// GetPawnMovesFromSquareBB returns all pawn moves including en passant.
+// The PawnAttackSet map handles forward-move blocking and regular captures.
+// En passant is detected via phantom pawns (in pawnOcc but not in colOcc) at rank 0 (white EP) or rank 7 (black EP).
 func (p Position) GetPawnMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	return (bt.PawnCaptureMask[turn][sq] & p.colOcc[1^turn]) | // capture ONLY if opponent
-		(bt.PawnMoveMask[turn][sq] & ^occ) // Move ONLY if empty
+	res = bt.PawnAttackSet[turn][sq][occ&bt.PawnMask[turn][sq]] & ^p.colOcc[turn]
+
+	// En passant: phantom pawns are in pawnOcc but not in colOcc
+	phantoms := p.pawnOcc & ^occ
+	r, f := sq.RF()
+	if turn == WHITE && r == 4 {
+		// Black's en passant signal is a phantom at rank 7 (adjacent file)
+		if f > 0 && phantoms.IsSet(Sq(7, f-1)) {
+			res = res.Set(Sq(5, f-1))
+		}
+		if f < 7 && phantoms.IsSet(Sq(7, f+1)) {
+			res = res.Set(Sq(5, f+1))
+		}
+	} else if turn == BLACK && r == 3 {
+		// White's en passant signal is a phantom at rank 0 (adjacent file)
+		if f > 0 && phantoms.IsSet(Sq(0, f-1)) {
+			res = res.Set(Sq(2, f-1))
+		}
+		if f < 7 && phantoms.IsSet(Sq(0, f+1)) {
+			res = res.Set(Sq(2, f+1))
+		}
+	}
+	return res
 }
 
 func (p Position) GetQueenMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
@@ -64,4 +87,4 @@ func (p Position) IsSquareAttacked(bt *BigTable, sq Square, by uint8) bool {
 		(p.GetPawnMovesFromSquareBB(bt, 1^by, sq)&p.colOcc[by]&p.pawnOcc != 0)
 }
 
-// TODO - handle en passant & castling !
+// TODO - handle castling !

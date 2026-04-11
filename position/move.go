@@ -74,24 +74,24 @@ func (p Position) GetCastlingMoveList(bt *BigTable) []Move {
 
 	if turn == WHITE { // WHITE
 		if (cb&CanCastleKingSide != 0) &&
-			((occ&(1<<5) | (1 << 6)) == 0) &&
+			(occ&((1<<5)|(1<<6)) == 0) &&
 			!p.IsSquareAttacked(bt, 5, BLACK) && !p.IsSquareAttacked(bt, 6, BLACK) {
 			moves = append(moves, Move{4, 6, CASTLEMOVE, 1}) // sc 1
 		}
 		if (cb&CanCastleQueenSide != 0) &&
-			((occ&(1<<1) | (1 << 2) | (1 << 3)) == 0) &&
+			(occ&((1<<1)|(1<<2)|(1<<3)) == 0) &&
 			!p.IsSquareAttacked(bt, 3, BLACK) && !p.IsSquareAttacked(bt, 2, BLACK) {
 			moves = append(moves, Move{4, 2, CASTLEMOVE, 1}) // sc 1
 		}
 
 	} else { // BLACK
 		if (cb&CanCastleKingSide != 0) &&
-			((occ&(1<<61) | (1 << 62)) == 0) &&
+			(occ&((1<<61)|(1<<62)) == 0) &&
 			!p.IsSquareAttacked(bt, 61, WHITE) && !p.IsSquareAttacked(bt, 62, WHITE) {
 			moves = append(moves, Move{60, 62, CASTLEMOVE, 1}) // sc 1
 		}
 		if (cb&CanCastleQueenSide != 0) &&
-			((occ&(1<<57) | (1 << 58) | (1 << 59)) == 0) &&
+			(occ&((1<<57)|(1<<58)|(1<<59)) == 0) &&
 			!p.IsSquareAttacked(bt, 59, WHITE) && !p.IsSquareAttacked(bt, 58, WHITE) {
 			moves = append(moves, Move{60, 58, CASTLEMOVE, 1}) // sc 1
 		}

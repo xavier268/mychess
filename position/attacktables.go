@@ -253,3 +253,130 @@ func GenerateBlackPawnCaptureMaskSq(sq Square) Bitboard {
 	}
 	return b
 }
+
+// Rank attacks only (east + west directions)
+func generateRookRankAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
+	r, f := sq.RF()
+	as := Bitboard(0)
+	var i int
+	for i = f + 1; i < 8; i++ {
+		as = as.Set(Sq(r, i))
+		if occ.IsSet(Sq(r, i)) {
+			break
+		}
+	}
+	for i = f - 1; i >= 0; i-- {
+		as = as.Set(Sq(r, i))
+		if occ.IsSet(Sq(r, i)) {
+			break
+		}
+	}
+	return as
+}
+
+// File attacks only (north + south directions)
+func generateRookFileAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
+	r, f := sq.RF()
+	as := Bitboard(0)
+	var i int
+	for i = r + 1; i < 8; i++ {
+		as = as.Set(Sq(i, f))
+		if occ.IsSet(Sq(i, f)) {
+			break
+		}
+	}
+	for i = r - 1; i >= 0; i-- {
+		as = as.Set(Sq(i, f))
+		if occ.IsSet(Sq(i, f)) {
+			break
+		}
+	}
+	return as
+}
+
+// NE+SW diagonal attacks
+func generateBishopNEAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
+	r, f := sq.RF()
+	as := Bitboard(0)
+	var i, j int
+	for i, j = r+1, f+1; i < 8 && j < 8; i, j = i+1, j+1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break
+		}
+	}
+	for i, j = r-1, f-1; i >= 0 && j >= 0; i, j = i-1, j-1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break
+		}
+	}
+	return as
+}
+
+// NW+SE diagonal attacks
+func generateBishopNWAttackSetSqOcc(sq Square, occ Bitboard) Bitboard {
+	r, f := sq.RF()
+	as := Bitboard(0)
+	var i, j int
+	for i, j = r+1, f-1; i < 8 && j >= 0; i, j = i+1, j-1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break
+		}
+	}
+	for i, j = r-1, f+1; i >= 0 && j < 8; i, j = i-1, j+1 {
+		as = as.Set(Sq(i, j))
+		if occ.IsSet(Sq(i, j)) {
+			break
+		}
+	}
+	return as
+}
+
+// generatePawnAttackMapSq builds the occupancy->attacks map for a pawn of the given color at sq.
+// The map key is (totalOccupancy & PawnMask). The value includes:
+//   - reachable forward squares (double-push blocked if intermediate square is occupied)
+//   - diagonal capture squares that have any piece (caller must AND with ^ownOcc to filter own pieces)
+func generatePawnAttackMapSq(turn uint8, sq Square) map[Bitboard]Bitboard {
+	var moveMask, captureMask Bitboard
+	if turn == WHITE {
+		moveMask = GenerateWhitePawnMoveMaskSq(sq)
+		captureMask = GenerateWhitePawnCaptureMaskSq(sq)
+	} else {
+		moveMask = GenerateBlackPawnMoveMaskSq(sq)
+		captureMask = GenerateBlackPawnCaptureMaskSq(sq)
+	}
+	fullMask := moveMask | captureMask
+	r, f := sq.RF()
+
+	res := make(map[Bitboard]Bitboard, 1<<fullMask.BitCount())
+	for occ := range fullMask.AllBitCombinations {
+		attacks := Bitboard(0)
+
+		if turn == WHITE {
+			if r < 7 && !occ.IsSet(Sq(r+1, f)) {
+				attacks = attacks.Set(Sq(r+1, f))
+				if r == 1 && !occ.IsSet(Sq(r+2, f)) {
+					attacks = attacks.Set(Sq(r+2, f))
+				}
+			}
+		} else {
+			if r > 0 && !occ.IsSet(Sq(r-1, f)) {
+				attacks = attacks.Set(Sq(r-1, f))
+				if r == 6 && !occ.IsSet(Sq(r-2, f)) {
+					attacks = attacks.Set(Sq(r-2, f))
+				}
+			}
+		}
+
+		for capSq := range captureMask.AllSetSquares {
+			if occ.IsSet(capSq) {
+				attacks = attacks.Set(capSq)
+			}
+		}
+
+		res[occ] = attacks
+	}
+	return res
+}

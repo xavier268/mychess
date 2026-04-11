@@ -1,66 +1,77 @@
 package position
 
-import (
-	"fmt"
-	"mychess/magic"
-)
-
 // Bigtable contains all the fixed structures required to compute attack sets and moves of a given position.
 // There should only be one such straucture, and it is immutable.
 // It should be cached in file as much as possible, since its construction is cpu/memory intensive.
 type BigTable struct {
 	// Precomputed simple attacks
+	// Square -> AttackSet
 	KingAttacks   [64]Bitboard
 	KnightAttacks [64]Bitboard
 
 	// Sliding pieces require a mask
-	// Queen is a combination of bishop & rook
-	RookMask        [64]Bitboard
-	BishopMask      [64]Bitboard
-	PawnCaptureMask [2][64]Bitboard
-	PawnMoveMask    [2][64]Bitboard
+	// Queen is a combination of the 4 bishop & rook masks
+	RookMaskRank, RookMaskFile [64]Bitboard
+	BishopMaskNE, BishopMaskNW [64]Bitboard
+	PawnMask                   [2][64]Bitboard // (color, square) -> Mask of all useful info (2 cases devant, les deux cases de prises possibles)
 
-	// Complex attack sets are stored in a (single) MagicMap
-	// Tables are :
-	// 0-  rookattacksets
-	// 1-  bishop attack sets
-	// 2-  XXXXXX whitepawn attack sets  ==> INUTILE ?? // TODO
-	// Since we have less than 4 tables, we do not need to use reduced squares and mirror the results.
-	*magic.MagicMap
+	// Attack sets for sliding pieces
+	RookAttackSetRank, RookAttackSetFile [64]map[Bitboard]Bitboard // (square, maskedOccupancy) -> AttackSet
+	BishopAttackSetNE, BishopAttackSetNW [64]map[Bitboard]Bitboard // (square, maskedOccupancy) -> AttackSet
+
+	// Attack sets for pawns
+	PawnAttackSet [2][64]map[Bitboard]Bitboard // (color, square) -> (occupancy -> AttackSet)
+
 }
 
 // Create and initialize a new BigTable
 func NewBigTable() *BigTable {
 	b := new(BigTable)
-	b.MagicMap = new(magic.MagicMap)
 
-	// Initialize the simple attacks
+	// Initialize masks
 	for sq := Square(0); sq < 64; sq++ {
+		r, f := sq.RF()
+
 		b.KingAttacks[sq] = GenerateKingAttacksSq(sq)
 		b.KnightAttacks[sq] = GenerateKnightAttacksSq(sq)
-		b.RookMask[sq] = GenerateRookMaskSq(sq)
-		b.BishopMask[sq] = GenerateBishopMaskSq(sq)
-		b.PawnCaptureMask[WHITE][sq] = GenerateWhitePawnCaptureMaskSq(sq)
-		b.PawnCaptureMask[BLACK][sq] = GenerateBlackPawnCaptureMaskSq(sq)
-		b.PawnMoveMask[WHITE][sq] = GenerateWhitePawnMoveMaskSq(sq)
-		b.PawnMoveMask[BLACK][sq] = GenerateBlackPawnMoveMaskSq(sq)
+
+		b.RookMaskRank[sq] = Rank(r).Unset(sq).Unset(Sq(r, 0)).Unset(Sq(r, 7))
+		b.RookMaskFile[sq] = File(f).Unset(sq).Unset(Sq(0, f)).Unset(Sq(7, f))
+		b.BishopMaskNE[sq] = Diagonal(sq).Unset(sq) & Interior()
+		b.BishopMaskNW[sq] = AntiDiagonal(sq).Unset(sq) & Interior()
+		b.PawnMask[WHITE][sq] = GenerateWhitePawnMoveMaskSq(sq) | GenerateWhitePawnCaptureMaskSq(sq)
+		b.PawnMask[BLACK][sq] = GenerateBlackPawnMoveMaskSq(sq) | GenerateBlackPawnCaptureMaskSq(sq)
 	}
 
-	// Prepare table entries into the MagicMap
-	// 0-  rookattacksets
-	// 1-  bishop attack sets
-	tes := make([]magic.TableEntry, 0, 256)
-	var te magic.TableEntry
+	// Build attack set maps
 	for sq := Square(0); sq < 64; sq++ {
-		// rook - table 0
-		te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 0)), Values: GenerateRookAttacksMagicMapSq(sq)}
-		tes = append(tes, te)
-		// bishop - table 1
-		te = magic.TableEntry{Sqt: uint8(SquareTable(sq, 1)), Values: GenerateBishopAttacksMagicMapSq(sq)}
-		tes = append(tes, te)
+		mask := b.RookMaskRank[sq]
+		b.RookAttackSetRank[sq] = make(map[Bitboard]Bitboard, 1<<mask.BitCount())
+		for occ := range mask.AllBitCombinations {
+			b.RookAttackSetRank[sq][occ] = generateRookRankAttackSetSqOcc(sq, occ)
+		}
+
+		mask = b.RookMaskFile[sq]
+		b.RookAttackSetFile[sq] = make(map[Bitboard]Bitboard, 1<<mask.BitCount())
+		for occ := range mask.AllBitCombinations {
+			b.RookAttackSetFile[sq][occ] = generateRookFileAttackSetSqOcc(sq, occ)
+		}
+
+		mask = b.BishopMaskNE[sq]
+		b.BishopAttackSetNE[sq] = make(map[Bitboard]Bitboard, 1<<mask.BitCount())
+		for occ := range mask.AllBitCombinations {
+			b.BishopAttackSetNE[sq][occ] = generateBishopNEAttackSetSqOcc(sq, occ)
+		}
+
+		mask = b.BishopMaskNW[sq]
+		b.BishopAttackSetNW[sq] = make(map[Bitboard]Bitboard, 1<<mask.BitCount())
+		for occ := range mask.AllBitCombinations {
+			b.BishopAttackSetNW[sq][occ] = generateBishopNWAttackSetSqOcc(sq, occ)
+		}
+
+		b.PawnAttackSet[WHITE][sq] = generatePawnAttackMapSq(WHITE, sq)
+		b.PawnAttackSet[BLACK][sq] = generatePawnAttackMapSq(BLACK, sq)
 	}
-	st := magic.InitMagicMap(b.MagicMap, tes...)
-	fmt.Println(st.String())
 
 	return b
 }

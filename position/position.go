@@ -17,7 +17,7 @@ type Position struct {
 	// // Occupancies for each side, all actual pieces (king INCLUDED), but en passant marker not included
 	colOcc [2]Bitboard
 	// all colors together
-	// en passant is indicated as rank 0 for the white pawn (there can never be a black pawn here because of promotion), WHITHOUT any occupancy flag.
+	// en passant is indicated as a "phantom" pawn between the initial position and the actual move, 2 squares further. The Phantom Pawn has NO occupancy flag, that is the way to recognize it is an "en passant" artefact.
 	pawnOcc Bitboard
 	// all colors together
 	rookOcc Bitboard
@@ -136,34 +136,44 @@ func (st Status) String() string {
 }
 
 // Extract the en passant flag of the opposite player.
-// It is a pawn position that has no corresponding occupancy and one the last or first rank).
-// 0 means no en passant flag in place.
+// Phantom pawns (in pawnOcc but not in colOcc) at rank 7 are BLACK's EP signals (black double-pushed).
+// Phantom pawns at rank 0 are WHITE's EP signals (white double-pushed).
+// Returns the opponent's phantom pawn(s) relevant to the current turn.
 func (p Position) EnPassantFlag() Bitboard {
-	occ := p.colOcc[1-p.status.GetTurn()]
-	return p.pawnOcc & ^occ
+	phantoms := p.pawnOcc & ^(p.colOcc[WHITE] | p.colOcc[BLACK])
+	if p.status.GetTurn() == WHITE {
+		return phantoms & Rank(7) // black's signals
+	}
+	return phantoms & Rank(0) // white's signals
 }
 
-// Zero all enpassant flags
+// Zero all enpassant flags (phantom pawns not in any colOcc)
 func (p *Position) ResetEnPassantFlag() {
 	p.pawnOcc &= p.colOcc[WHITE] | p.colOcc[BLACK]
 }
 
-// Capture is the end position of any move.
-// p.turn is playing, so enpassant will be triggered based on (1-p.turn) enpassant flag.
-// If capture is not an active enpassant target, return 0
-// If capture is an active enpassant square, remove is a map of pawn and occupancy(1 - p.turn) we will need to zero.
+// EnPassantCaptureMask returns the squares to clear in pawnOcc when an en passant capture lands on `capture`.
+// Returns 0 if `capture` is not a valid en passant landing square.
+// The returned mask includes: the phantom pawn + the actual captured pawn.
 func (p Position) EnPassantCaptureMask(capture Square) (remove Bitboard) {
-
-	if remove = p.EnPassantFlag(); remove != 0 {
-		if turn := p.status.GetTurn(); turn == WHITE {
-			if capture.Rank() == 5 {
-				return remove | capture.South().Bitboard() // removes both the enpassant flag and the adverse pawn
-			}
-
-		} else { // turn == BLACK
-			if capture.Rank() == 2 {
-				return remove | capture.North().Bitboard() // removes both the enpassant flag and the adverse pawn
-			}
+	epFlag := p.EnPassantFlag()
+	if epFlag == 0 {
+		return 0
+	}
+	turn := p.status.GetTurn()
+	if turn == WHITE && capture.Rank() == 5 {
+		// Black's phantom is at rank 7, same file as the landing square
+		phantom := Sq(7, capture.File())
+		if epFlag.IsSet(phantom) {
+			// Remove phantom + the actual black pawn at rank 4
+			return phantom.Bitboard() | Sq(4, capture.File()).Bitboard()
+		}
+	} else if turn == BLACK && capture.Rank() == 2 {
+		// White's phantom is at rank 0, same file as the landing square
+		phantom := Sq(0, capture.File())
+		if epFlag.IsSet(phantom) {
+			// Remove phantom + the actual white pawn at rank 3
+			return phantom.Bitboard() | Sq(3, capture.File()).Bitboard()
 		}
 	}
 	return 0
