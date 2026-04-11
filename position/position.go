@@ -103,7 +103,7 @@ func (st Status) GetCastleBits(side uint8) uint8 {
 }
 
 func (st *Status) SetCastleBits(side uint8, castleBits uint8) {
-	st.KingStatus[side] = (st.KingStatus[side] & 0b11_000000) | castleBits
+	st.KingStatus[side] = (st.KingStatus[side] & 0b00_111111) | castleBits
 }
 
 func (st Status) GetKingPosition(side uint8) Square {
