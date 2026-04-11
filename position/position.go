@@ -29,6 +29,10 @@ type Position struct {
 	// queen appears as both a rook and a bishop
 	// king positions derived from status data below
 	status Status
+
+	// Zobrist hash of the position; 0 when uninitialized.
+	// Maintained incrementally by DoMove; restored atomically by UndoMove.
+	Hash uint64
 }
 
 // Special type to handle status word.

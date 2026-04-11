@@ -26,6 +26,7 @@ type Move struct {
 	CaptureSquare Square // square of the captured piece (== To, except en passant)
 	PrevStatus    Status // full status snapshot before this move
 	PrevEPFile    int8   // file of the en passant phantom before this move; -1 = none
+	PrevHash      uint64 // Zobrist hash before this move; restored by UndoMove
 }
 
 func (m Move) String() string {
@@ -90,6 +91,37 @@ func (pp *Position) revokeRookCastle(color uint8, sq Square) {
 		if sq == 63 {
 			pp.status.KingStatus[BLACK] &= ^uint8(CanCastleKingSide)
 		}
+	}
+}
+
+// ── Zobrist hash helpers ──────────────────────────────────────────────────────
+
+// ZobristBitboards index constants – must match HashPosition.
+const (
+	zbWhiteOcc  = 0
+	zbBlackOcc  = 1
+	zbPawnOcc   = 2
+	zbRookOcc   = 3
+	zbBishopOcc = 4
+	zbKnightOcc = 5
+)
+
+// hashXORPieceType XORs the type-bitboard Zobrist key for piece type pt at sq.
+// KING is excluded: its ZobristKing contribution is handled by the status
+// bracket in DoMove (XOR out old, XOR in new around all bitboard changes).
+func (pp *Position) hashXORPieceType(sq Square, pt Piece) {
+	switch pt {
+	case PAWN:
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][sq]
+	case KNIGHT:
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbKnightOcc][sq]
+	case BISHOP:
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbBishopOcc][sq]
+	case ROOK:
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbRookOcc][sq]
+	case QUEEN:
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbRookOcc][sq]
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbBishopOcc][sq]
 	}
 }
 
@@ -181,7 +213,15 @@ func (p Position) GetCastlingMoveList(bt *BigTable) []Move {
 
 // DoMove applies m to p and returns the resulting position together with the
 // move enriched with all undo information (Captured, CaptureSquare, PrevStatus,
-// PrevEPFile).  Pass the returned Move to UndoMove to restore p exactly.
+// PrevEPFile, PrevHash).  Pass the returned Move to UndoMove to restore p exactly.
+//
+// Hash is maintained incrementally using DefaultZT:
+//   - Status-dependent contributions (castle bits, king squares) are bracketed:
+//     XOR out before any change, XOR in after all changes.
+//   - colOcc and type-bitboard changes are XORed inline alongside each bitboard op.
+//   - The turn flip is unconditional (ZobristTurn).
+//   - The EP phantom is XORed out at the bracket and XORed in again if a new
+//     phantom is created by a double pawn push.
 func (p Position) DoMove(m Move) (Position, Move) {
 	turn := p.status.GetTurn()
 	opponent := 1 ^ turn
@@ -189,6 +229,7 @@ func (p Position) DoMove(m Move) (Position, Move) {
 
 	// ── 1. Save undo information ──────────────────────────────────────────────
 	m.PrevStatus = p.status
+	m.PrevHash = p.Hash
 
 	phantoms := p.pawnOcc & ^(p.colOcc[WHITE] | p.colOcc[BLACK])
 	m.PrevEPFile = -1
@@ -197,11 +238,25 @@ func (p Position) DoMove(m Move) (Position, Move) {
 		break // at most one phantom at a time
 	}
 
-	// ── 2. Clear the outgoing en passant phantom ──────────────────────────────
+	// ── 2. Hash bracket – XOR out status-dependent contributions ─────────────
+	// Castle bits: GetCastleBits returns {0,0x40,0x80,0xC0}; >>6 maps to 0-3.
+	pp.Hash ^= DefaultZT.ZobristCastling[WHITE][p.status.GetCastleBits(WHITE)>>6]
+	pp.Hash ^= DefaultZT.ZobristCastling[BLACK][p.status.GetCastleBits(BLACK)>>6]
+	// King squares (in Status, separate from colOcc):
+	pp.Hash ^= DefaultZT.ZobristKing[WHITE][p.status.GetKingPosition(WHITE)]
+	pp.Hash ^= DefaultZT.ZobristKing[BLACK][p.status.GetKingPosition(BLACK)]
+	// EP phantom in pawnOcc (rank 7 for WHITE's turn target, rank 0 for BLACK's):
+	if m.PrevEPFile >= 0 {
+		phantomRank := int(1-turn) * 7 // WHITE to move → 7; BLACK to move → 0
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][Sq(phantomRank, int(m.PrevEPFile))]
+	}
+
+	// ── 3. Clear the outgoing en passant phantom ──────────────────────────────
 	pp.pawnOcc &= p.colOcc[WHITE] | p.colOcc[BLACK]
 
-	// ── 3. Switch turn ────────────────────────────────────────────────────────
+	// ── 4. Switch turn (unconditional XOR) ────────────────────────────────────
 	pp.status.SwitchTurn()
+	pp.Hash ^= DefaultZT.ZobristTurn
 
 	switch m.Promotion {
 
@@ -220,14 +275,20 @@ func (p Position) DoMove(m Move) (Position, Move) {
 			rookTo = m.To + 1
 		}
 
-		// Move king
+		// Move king (ZobristKing handled by the bracket; only colOcc changes here)
 		pp.colOcc[turn] = (pp.colOcc[turn] & ^m.From.Bitboard()) | m.To.Bitboard()
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.From]
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.To]
 		pp.status.SetKingPosition(turn, m.To)
 		pp.status.SetCastleBits(turn, 0)
 
-		// Move rook
+		// Move rook (colOcc + rookOcc)
 		pp.colOcc[turn] = (pp.colOcc[turn] & ^rookFrom.Bitboard()) | rookTo.Bitboard()
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][rookFrom]
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][rookTo]
 		pp.rookOcc = (pp.rookOcc & ^rookFrom.Bitboard()) | rookTo.Bitboard()
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbRookOcc][rookFrom]
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbRookOcc][rookTo]
 
 	// ── Pawn promotion ────────────────────────────────────────────────────────
 	case KNIGHT, BISHOP, ROOK, QUEEN:
@@ -237,13 +298,20 @@ func (p Position) DoMove(m Move) (Position, Move) {
 		// Remove any piece at destination
 		if m.Captured != EMPTY {
 			pp.colOcc[opponent] &= ^m.To.Bitboard()
+			pp.Hash ^= DefaultZT.ZobristBitboards[opponent][m.To]
 			pp.clearPieceAt(m.To)
+			pp.hashXORPieceType(m.To, pabs(m.Captured))
 		}
 
-		// Remove pawn from source; place promoted piece at destination
+		// Remove pawn from source
 		pp.pawnOcc &= ^m.From.Bitboard()
 		pp.colOcc[turn] = (pp.colOcc[turn] & ^m.From.Bitboard()) | m.To.Bitboard()
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.From]
+		pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][m.From]
+		// Place promoted piece at destination
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.To]
 		pp.setPieceAt(m.To, m.Promotion)
+		pp.hashXORPieceType(m.To, m.Promotion)
 
 	// ── Normal move (push, capture, en passant) ────────────────────────────────
 	default: // EMPTY
@@ -261,21 +329,33 @@ func (p Position) DoMove(m Move) (Position, Move) {
 			} else {
 				m.Captured = PAWN
 			}
+			// Remove captured pawn (at the rank of the moving pawn, adjacent file)
 			pp.pawnOcc &= ^m.CaptureSquare.Bitboard()
 			pp.colOcc[opponent] &= ^m.CaptureSquare.Bitboard()
+			pp.Hash ^= DefaultZT.ZobristBitboards[opponent][m.CaptureSquare]
+			pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][m.CaptureSquare]
 		} else {
 			m.Captured = p.PieceAt(m.To)
 			m.CaptureSquare = m.To
 			if m.Captured != EMPTY {
 				pp.colOcc[opponent] &= ^m.To.Bitboard()
+				pp.Hash ^= DefaultZT.ZobristBitboards[opponent][m.To]
 				pp.clearPieceAt(m.To)
+				pp.hashXORPieceType(m.To, pabs(m.Captured))
 			}
 		}
 
-		// Move piece
+		// Move piece (colOcc always; type bitboard for non-kings)
 		pp.colOcc[turn] = (pp.colOcc[turn] & ^m.From.Bitboard()) | m.To.Bitboard()
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.From]
+		pp.Hash ^= DefaultZT.ZobristBitboards[turn][m.To]
 		pp.clearPieceAt(m.From)
 		pp.setPieceAt(m.To, movedType)
+		if movedType != KING {
+			// King's ZobristKing contribution is handled by the status bracket.
+			pp.hashXORPieceType(m.From, movedType)
+			pp.hashXORPieceType(m.To, movedType)
+		}
 
 		switch movedType {
 		case KING:
@@ -286,28 +366,36 @@ func (p Position) DoMove(m Move) (Position, Move) {
 		case PAWN:
 			// Double push: set new en passant phantom.
 			// Only place the phantom if the target square is unoccupied; if a
-			// piece already sits there the phantom would be invisible (it would
-			// be masked out by colOcc in phantom detection) and would also
-			// permanently corrupt pawnOcc after subsequent UndoMove.
+			// piece already sits there the phantom would be invisible (masked out
+			// by colOcc in phantom detection) and would corrupt pawnOcc on undo.
 			allOcc := pp.colOcc[WHITE] | pp.colOcc[BLACK]
 			if turn == WHITE && m.From.Rank() == 1 && m.To.Rank() == 3 {
 				phantomSq := Sq(0, m.From.File())
 				if !allOcc.IsSet(phantomSq) {
 					pp.pawnOcc |= phantomSq.Bitboard()
+					pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
 				}
 			} else if turn == BLACK && m.From.Rank() == 6 && m.To.Rank() == 4 {
 				phantomSq := Sq(7, m.From.File())
 				if !allOcc.IsSet(phantomSq) {
 					pp.pawnOcc |= phantomSq.Bitboard()
+					pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
 				}
 			}
 		}
 	}
 
-	// Revoke opponent's castling right if their rook was captured
+	// Revoke opponent's castling right if their rook was captured.
+	// (The castle-bit hash change is handled by the closing bracket below.)
 	if m.Captured != EMPTY && pabs(m.Captured) == ROOK {
 		pp.revokeRookCastle(opponent, m.CaptureSquare)
 	}
+
+	// ── 5. Hash bracket – XOR in new status-dependent contributions ───────────
+	pp.Hash ^= DefaultZT.ZobristCastling[WHITE][pp.status.GetCastleBits(WHITE)>>6]
+	pp.Hash ^= DefaultZT.ZobristCastling[BLACK][pp.status.GetCastleBits(BLACK)>>6]
+	pp.Hash ^= DefaultZT.ZobristKing[WHITE][pp.status.GetKingPosition(WHITE)]
+	pp.Hash ^= DefaultZT.ZobristKing[BLACK][pp.status.GetKingPosition(BLACK)]
 
 	return pp, m
 }
@@ -316,13 +404,15 @@ func (p Position) DoMove(m Move) (Position, Move) {
 
 // UndoMove restores the position before DoMove was called.
 // m must be the enriched Move returned by DoMove (undo fields must be intact).
+// Hash is restored atomically from m.PrevHash — no re-computation needed.
 func (p Position) UndoMove(m Move) Position {
 	pp := p
 	turn := m.PrevStatus.GetTurn()
 	opponent := 1 ^ turn
 
-	// Restore all status bits (turn, king positions, castle rights)
+	// Restore all status bits (turn, king positions, castle rights) and hash.
 	pp.status = m.PrevStatus
+	pp.Hash = m.PrevHash
 
 	switch m.Promotion {
 

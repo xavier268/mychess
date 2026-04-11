@@ -23,13 +23,33 @@ import (
 
 // ── helper ────────────────────────────────────────────────────────────────────
 
-// assertRoundTrip verifies that DoMove followed by UndoMove returns the exact
-// original position.  The label is printed on failure for easy identification.
+// assertRoundTrip verifies:
+//  1. DoMove followed by UndoMove returns the exact original position.
+//  2. After DoMove the incremental hash matches the from-scratch hash.
+//  3. After UndoMove the hash is restored to the original.
 func assertRoundTrip(t *testing.T, orig Position, m Move, label string) {
 	t.Helper()
+
+	// Test positions built with the builder have Hash=0.  Establish the
+	// correct starting hash so the incremental-vs-full comparison is valid.
+	orig.Hash = DefaultZT.HashPosition(orig)
+
 	after, doneMove := orig.DoMove(m)
+
+	// Incremental hash after DoMove must match the full recomputation.
+	if want := DefaultZT.HashPosition(after); after.Hash != want {
+		t.Errorf("[%s] DoMove: incremental hash %016x != full hash %016x",
+			label, after.Hash, want)
+	}
+
 	restored := after.UndoMove(doneMove)
 	assertPositionsEqual(t, orig, restored, label)
+
+	// Hash must be restored to the original value.
+	if restored.Hash != orig.Hash {
+		t.Errorf("[%s] UndoMove: hash %016x != original %016x",
+			label, restored.Hash, orig.Hash)
+	}
 }
 
 // assertPositionsEqual compares two positions field by field for a useful diff.
@@ -270,6 +290,40 @@ func TestRoundTrip_EPCreatedThenUsed(t *testing.T) {
 
 	assertPositionsEqual(t, after1, back1, "after undoing EP capture")
 	assertPositionsEqual(t, orig, back2, "after undoing double push + EP capture")
+}
+
+// ── G. Explicit hash verification ────────────────────────────────────────────
+
+// assertHashConsistent verifies that p.Hash == DefaultZT.HashPosition(p).
+func assertHashConsistent(t *testing.T, p Position, label string) {
+	t.Helper()
+	want := DefaultZT.HashPosition(p)
+	if p.Hash != want {
+		t.Errorf("[%s] hash mismatch: got %016x, want %016x", label, p.Hash, want)
+	}
+}
+
+func TestHash_StartPosition(t *testing.T) {
+	assertHashConsistent(t, StartPosition, "StartPosition")
+}
+
+func TestHash_IncrementalVsFullAfterManyMoves(t *testing.T) {
+	// Play a short forced sequence from the start position, verifying the
+	// incremental hash after every half-move.
+	sequence := []Move{
+		mkMove("e2", "e4", EMPTY), // 1. e4
+		mkMove("e7", "e5", EMPTY), // 1. ...e5
+		mkMove("g1", "f3", EMPTY), // 2. Nf3
+		mkMove("b8", "c6", EMPTY), // 2. ...Nc6
+		mkMove("f1", "c4", EMPTY), // 3. Bc4
+		mkMove("g8", "f6", EMPTY), // 3. ...Nf6
+	}
+
+	p := StartPosition
+	for i, m := range sequence {
+		p, _ = p.DoMove(m)
+		assertHashConsistent(t, p, fmt.Sprintf("move %d", i+1))
+	}
 }
 
 // ── sanity print (not a test, just a visual aid) ──────────────────────────────

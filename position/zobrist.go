@@ -24,11 +24,19 @@ type ZobristTable struct {
 	ZobristTurn uint64 // 8B
 }
 
+// DefaultZT is the package-level Zobrist table, initialised once at startup.
+// DoMove uses it to maintain Position.Hash incrementally.
+var DefaultZT = func() ZobristTable {
+	var zt ZobristTable
+	zt.Init()
+	return zt
+}()
+
 // Should be done once, and saved to file ...
 func (z *ZobristTable) Init() {
 
 	// Generate enough "good" random numbers
-	const size = 6*64*8 + 2*64*8 + 2*4*8 + 1
+	const size = 6*64*8 + 2*64*8 + 2*4*8 + 8 // ZobristTurn is uint64 (8 bytes)
 	rands := make([]byte, size)
 	byteIndex := 0
 	rand.Read(rands)
@@ -54,6 +62,7 @@ func (z *ZobristTable) Init() {
 	}
 
 	z.ZobristTurn = binary.LittleEndian.Uint64(rands[byteIndex : byteIndex+8])
+	byteIndex += 8
 
 	if byteIndex != size {
 		panic("internal error - Zobrist table not initialized correctly")
@@ -92,13 +101,21 @@ func (zt *ZobristTable) HashPosition(p Position) uint64 {
 	for c := range 2 {
 		hash ^= zt.ZobristKing[c][p.status.GetKingPosition(uint8(c))]
 	}
-	// hash castling
+	// hash castling – GetCastleBits returns {0,0x40,0x80,0xC0}; >>6 maps to 0–3
 	for c := range 2 {
-		hash ^= zt.ZobristCastling[c][p.status.GetCastleBits(uint8(c))]
+		hash ^= zt.ZobristCastling[c][p.status.GetCastleBits(uint8(c))>>6]
 	}
 	// hash turn
 	if p.status.GetTurn() == 1 {
 		hash ^= zt.ZobristTurn
 	}
 	return hash
+}
+
+// init seeds the Hash field of StartPosition after DefaultZT is ready.
+// All init() functions run after package-level vars are initialised, so
+// DefaultZT (a package-level var with an initialiser) is guaranteed to be
+// populated by the time this runs.
+func init() {
+	StartPosition.Hash = DefaultZT.HashPosition(StartPosition)
 }
