@@ -7,7 +7,7 @@ import (
 
 // ============== Position definition ==============================
 
-// Constant to indicate turn (who is expected to play ) and index the masks and status.
+// Constant to indicate turn (who is expected to play) and index the masks and status.
 const (
 	WHITE = 0
 	BLACK = 1

@@ -165,3 +165,12 @@ func Diagonal(sq Square) Bitboard {
 	r, f := sq.RF()
 	return diagonals[r+7-f]
 }
+
+// The 4 center squares
+func Center() Bitboard {
+	return Bitboard(0).
+		Set(SqParse("d4")).
+		Set(SqParse("d5")).
+		Set(SqParse("e4")).
+		Set(SqParse("e5"))
+}

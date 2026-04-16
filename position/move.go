@@ -130,6 +130,7 @@ func (pp *Position) hashXORPieceType(sq Square, pt Piece) {
 // GetMoveList returns all pseudo-legal moves for the side to move.
 // Illegal moves that leave the own king in check are NOT filtered.
 // Promotion is expanded into four moves (Q/R/B/N).
+// Castling moves are included.
 // Undo fields are NOT populated here; DoMove fills them.
 func (p Position) GetMoveList() []Move {
 	moves := make([]Move, 0, 32)
