@@ -66,7 +66,7 @@ func BenchmarkNewBigTable(b *testing.B) {
 	b.ReportAllocs()
 	var sink *BigTable
 	for b.Loop() {
-		sink = NewBigTable()
+		sink = newBigTable()
 	}
 	_ = sink
 }
@@ -77,7 +77,7 @@ func BenchmarkGetMoveList_Baseline(b *testing.B) {
 	b.ReportAllocs()
 	var sink []Move
 	for b.Loop() {
-		sink = benchPos.GetMoveList(bt)
+		sink = benchPos.GetMoveList()
 	}
 	_ = sink
 }
@@ -88,7 +88,7 @@ func BenchmarkGetMoveList_Castling(b *testing.B) {
 	b.ReportAllocs()
 	var sink []Move
 	for b.Loop() {
-		sink = benchPosCastle.GetMoveList(bt)
+		sink = benchPosCastle.GetMoveList()
 	}
 	_ = sink
 }
@@ -99,7 +99,7 @@ func BenchmarkGetMoveList_EnPassant(b *testing.B) {
 	b.ReportAllocs()
 	var sink []Move
 	for b.Loop() {
-		sink = benchPosEP.GetMoveList(bt)
+		sink = benchPosEP.GetMoveList()
 	}
 	_ = sink
 }
@@ -110,7 +110,7 @@ func BenchmarkGetMovesBB_Queen(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPos.GetMovesBB(bt, SqParse("d1"))
+		sink = benchPos.GetMovesBB(SqParse("d1"))
 	}
 	_ = sink
 }
@@ -119,7 +119,7 @@ func BenchmarkGetMovesBB_Rook(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPos.GetMovesBB(bt, SqParse("f1"))
+		sink = benchPos.GetMovesBB(SqParse("f1"))
 	}
 	_ = sink
 }
@@ -128,7 +128,7 @@ func BenchmarkGetMovesBB_Bishop(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPos.GetMovesBB(bt, SqParse("f4"))
+		sink = benchPos.GetMovesBB(SqParse("f4"))
 	}
 	_ = sink
 }
@@ -137,7 +137,7 @@ func BenchmarkGetMovesBB_Knight(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPos.GetMovesBB(bt, SqParse("f3"))
+		sink = benchPos.GetMovesBB(SqParse("f3"))
 	}
 	_ = sink
 }
@@ -146,7 +146,7 @@ func BenchmarkGetMovesBB_Pawn_NoEP(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPos.GetMovesBB(bt, SqParse("e5"))
+		sink = benchPos.GetMovesBB(SqParse("e5"))
 	}
 	_ = sink
 }
@@ -155,7 +155,7 @@ func BenchmarkGetMovesBB_Pawn_WithEP(b *testing.B) {
 	b.ReportAllocs()
 	var sink Bitboard
 	for b.Loop() {
-		sink = benchPosEP.GetMovesBB(bt, SqParse("e5"))
+		sink = benchPosEP.GetMovesBB(SqParse("e5"))
 	}
 	_ = sink
 }
@@ -166,7 +166,7 @@ func BenchmarkIsSquareAttacked(b *testing.B) {
 	b.ReportAllocs()
 	var sink bool
 	for b.Loop() {
-		sink = benchPos.IsSquareAttacked(bt, SqParse("e4"), WHITE)
+		sink = benchPos.IsSquareAttacked(SqParse("e4"), WHITE)
 	}
 	_ = sink
 }

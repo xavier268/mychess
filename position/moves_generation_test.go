@@ -31,7 +31,7 @@ import (
 func assertMovesFromSq(t *testing.T, p Position, from string, expected ...string) {
 	t.Helper()
 	fromSq := SqParse(from)
-	got := p.GetMovesBB(bt, fromSq)
+	got := p.GetMovesBB(fromSq)
 
 	want := Bitboard(0)
 	for _, s := range expected {
@@ -346,7 +346,7 @@ func TestCastleWhiteKingside(t *testing.T) {
 	// Clear f1,g1; castling rights set
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1").SetCastle(WHITE, CanCastleKingSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	found := false
 	for _, m := range moves {
 		if m.From == SqParse("e1") && m.To == SqParse("g1") && m.Promotion == CASTLEMOVE {
@@ -361,7 +361,7 @@ func TestCastleWhiteKingside(t *testing.T) {
 func TestCastleWhiteQueenside(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "a1").SetCastle(WHITE, CanCastleQueenSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	found := false
 	for _, m := range moves {
 		if m.From == SqParse("e1") && m.To == SqParse("c1") && m.Promotion == CASTLEMOVE {
@@ -377,7 +377,7 @@ func TestCastleBlackKingside(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(BLACK, "h8").SetCastle(BLACK, CanCastleKingSide)
 	p.status.SetTurn(BLACK)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	found := false
 	for _, m := range moves {
 		if m.From == SqParse("e8") && m.To == SqParse("g8") && m.Promotion == CASTLEMOVE {
@@ -393,7 +393,7 @@ func TestCastleBlackQueenside(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(BLACK, "a8").SetCastle(BLACK, CanCastleQueenSide)
 	p.status.SetTurn(BLACK)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	found := false
 	for _, m := range moves {
 		if m.From == SqParse("e8") && m.To == SqParse("c8") && m.Promotion == CASTLEMOVE {
@@ -410,7 +410,7 @@ func TestCastleBlockedByOwnPiece(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1").AddBishop(WHITE, "f1").
 		SetCastle(WHITE, CanCastleKingSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for _, m := range moves {
 		if m.From == SqParse("e1") && m.To == SqParse("g1") && m.Promotion == CASTLEMOVE {
 			t.Error("castling must not be possible with f1 occupied")
@@ -423,7 +423,7 @@ func TestCastleBlockedByOpponent(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1").AddPawn(BLACK, "g1").
 		SetCastle(WHITE, CanCastleKingSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for _, m := range moves {
 		if m.From == SqParse("e1") && m.To == SqParse("g1") && m.Promotion == CASTLEMOVE {
 			t.Error("castling must not be possible with g1 occupied")
@@ -436,7 +436,7 @@ func TestCastleKingInCheck(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1").AddRook(BLACK, "e6"). // attacks e1
 		SetCastle(WHITE, CanCastleKingSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for _, m := range moves {
 		if m.Promotion == CASTLEMOVE {
 			t.Error("castling must not be possible when king is in check")
@@ -449,7 +449,7 @@ func TestCastleThroughAttackedSquare(t *testing.T) {
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1").AddRook(BLACK, "f6"). // attacks f1
 		SetCastle(WHITE, CanCastleKingSide)
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for _, m := range moves {
 		if m.From == SqParse("e1") && m.To == SqParse("g1") && m.Promotion == CASTLEMOVE {
 			t.Error("castling must not be possible when passing through attacked square f1")
@@ -461,7 +461,7 @@ func TestNoCastleRightsSet(t *testing.T) {
 	// Castle bits not set – no castling even with clear path
 	p := new(Position).AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddRook(WHITE, "h1") // no SetCastle
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for _, m := range moves {
 		if m.Promotion == CASTLEMOVE {
 			t.Error("castling must not be possible without castle rights")
@@ -472,7 +472,7 @@ func TestNoCastleRightsSet(t *testing.T) {
 // ── 9. STARTING POSITION ─────────────────────────────────────────────────────
 
 func TestStartingPositionMoveCount(t *testing.T) {
-	moves := StartPosition.GetMoveList(bt)
+	moves := StartPosition.GetMoveList()
 	if len(moves) != 20 {
 		t.Errorf("expected 20 moves from start, got %d", len(moves))
 	}
@@ -484,7 +484,7 @@ func TestBigTableMemory(t *testing.T) {
 	var before, after runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&before)
-	newBt := NewBigTable()
+	newBt := newBigTable()
 	runtime.ReadMemStats(&after)
 	_ = newBt // keep alive until after measurement
 	allocated := after.TotalAlloc - before.TotalAlloc

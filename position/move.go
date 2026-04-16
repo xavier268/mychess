@@ -131,13 +131,13 @@ func (pp *Position) hashXORPieceType(sq Square, pt Piece) {
 // Illegal moves that leave the own king in check are NOT filtered.
 // Promotion is expanded into four moves (Q/R/B/N).
 // Undo fields are NOT populated here; DoMove fills them.
-func (p Position) GetMoveList(bt *BigTable) []Move {
+func (p Position) GetMoveList() []Move {
 	moves := make([]Move, 0, 32)
 	turn := p.status.GetTurn()
 	promotionRank := int((1 - turn) * 7) // WHITE → 7, BLACK → 0
 
 	for fromSq := range p.colOcc[turn].AllSetSquares {
-		bb := p.GetMovesBB(bt, fromSq)
+		bb := p.GetMovesBB(fromSq)
 		for toSq := range bb.AllSetSquares {
 			// Score captures by piece value
 			sc := uint8(p.rookOcc.Get(toSq)*4 +
@@ -166,16 +166,16 @@ func (p Position) GetMoveList(bt *BigTable) []Move {
 		}
 	}
 
-	moves = append(moves, p.GetCastlingMoveList(bt)...)
+	moves = append(moves, p.GetCastlingMoveList()...)
 	slices.SortFunc(moves, func(a, b Move) int { return int(b.Score) - int(a.Score) })
 	return moves
 }
 
 // GetCastlingMoveList returns castling moves for the side to move, if legal.
-func (p Position) GetCastlingMoveList(bt *BigTable) []Move {
+func (p Position) GetCastlingMoveList() []Move {
 	turn := p.status.GetTurn()
 	cb := p.status.GetCastleBits(turn)
-	if cb == 0 || p.IsSquareAttacked(bt, p.status.GetKingPosition(turn), 1-turn) {
+	if cb == 0 || p.IsSquareAttacked(p.status.GetKingPosition(turn), 1-turn) {
 		return nil
 	}
 
@@ -185,23 +185,23 @@ func (p Position) GetCastlingMoveList(bt *BigTable) []Move {
 	if turn == WHITE {
 		if cb&CanCastleKingSide != 0 &&
 			occ&((1<<5)|(1<<6)) == 0 &&
-			!p.IsSquareAttacked(bt, 5, BLACK) && !p.IsSquareAttacked(bt, 6, BLACK) {
+			!p.IsSquareAttacked(5, BLACK) && !p.IsSquareAttacked(6, BLACK) {
 			moves = append(moves, Move{From: 4, To: 6, Promotion: CASTLEMOVE, Score: 1})
 		}
 		if cb&CanCastleQueenSide != 0 &&
 			occ&((1<<1)|(1<<2)|(1<<3)) == 0 &&
-			!p.IsSquareAttacked(bt, 3, BLACK) && !p.IsSquareAttacked(bt, 2, BLACK) {
+			!p.IsSquareAttacked(3, BLACK) && !p.IsSquareAttacked(2, BLACK) {
 			moves = append(moves, Move{From: 4, To: 2, Promotion: CASTLEMOVE, Score: 1})
 		}
 	} else {
 		if cb&CanCastleKingSide != 0 &&
 			occ&((1<<61)|(1<<62)) == 0 &&
-			!p.IsSquareAttacked(bt, 61, WHITE) && !p.IsSquareAttacked(bt, 62, WHITE) {
+			!p.IsSquareAttacked(61, WHITE) && !p.IsSquareAttacked(62, WHITE) {
 			moves = append(moves, Move{From: 60, To: 62, Promotion: CASTLEMOVE, Score: 1})
 		}
 		if cb&CanCastleQueenSide != 0 &&
 			occ&((1<<57)|(1<<58)|(1<<59)) == 0 &&
-			!p.IsSquareAttacked(bt, 59, WHITE) && !p.IsSquareAttacked(bt, 58, WHITE) {
+			!p.IsSquareAttacked(59, WHITE) && !p.IsSquareAttacked(58, WHITE) {
 			moves = append(moves, Move{From: 60, To: 58, Promotion: CASTLEMOVE, Score: 1})
 		}
 	}

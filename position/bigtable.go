@@ -1,8 +1,11 @@
 package position
 
+// the global, immutable, BigTable object.
+var BT *BigTable = newBigTable()
+
 // Bigtable contains all the fixed structures required to compute attack sets and moves of a given position.
-// There should only be one such straucture, and it is immutable.
-// It should be cached in file as much as possible, since its construction is cpu/memory intensive.
+// There should only be one such structure, and it is immutable.
+// It should be constructed only once, upon startup
 type BigTable struct {
 	// Precomputed simple attacks
 	// Square -> AttackSet
@@ -25,7 +28,7 @@ type BigTable struct {
 }
 
 // Create and initialize a new BigTable
-func NewBigTable() *BigTable {
+func newBigTable() *BigTable {
 	b := new(BigTable)
 
 	// Initialize masks

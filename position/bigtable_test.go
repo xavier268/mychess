@@ -7,6 +7,6 @@ import (
 
 func TestNewBigTableInit(t *testing.T) {
 	fmt.Println("Trying to create a BigTable")
-	_ = NewBigTable()
+	_ = newBigTable()
 	fmt.Println("BigTable created")
 }

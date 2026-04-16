@@ -9,7 +9,7 @@ func TestGetMoves1(t *testing.T) {
 	p := StartPosition
 
 	fmt.Println(p.String())
-	moves := p.GetMoveList(bt)
+	moves := p.GetMoveList()
 	for i, m := range moves {
 		fmt.Println(i, "\t", m.String())
 	}
@@ -19,7 +19,7 @@ func TestGetMoves1(t *testing.T) {
 
 	p = *rpt1
 	fmt.Println(p.String())
-	moves = p.GetMoveList(bt)
+	moves = p.GetMoveList()
 	for i, m := range moves {
 		fmt.Println(i, "\t", m.String())
 	}

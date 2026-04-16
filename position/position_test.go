@@ -6,10 +6,7 @@ import (
 	"unsafe"
 )
 
-// Big table for testing
-var bt = NewBigTable()
-
-// Predfined random test positions
+// Predefined random test positions
 var rpt1 = new(Position).
 	AddKing(WHITE, "c2").AddKing(BLACK, "c7").
 	AddBishop(WHITE, "a2", "a3").
@@ -70,13 +67,13 @@ func TestRandomPosition(t *testing.T) {
 	for s, res := range testSqu {
 		sq := SqParse(s)
 		fmt.Println(rpt1)
-		fmt.Println("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(bt, sq, WHITE))
-		fmt.Println("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(bt, sq, BLACK))
-		if rpt1.IsSquareAttacked(bt, sq, WHITE) != res.w {
-			t.Error("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(bt, sq, WHITE))
+		fmt.Println("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(sq, WHITE))
+		fmt.Println("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(sq, BLACK))
+		if rpt1.IsSquareAttacked(sq, WHITE) != res.w {
+			t.Error("Square", sq.String(), "is attacked by WHITE :", rpt1.IsSquareAttacked(sq, WHITE))
 		}
-		if rpt1.IsSquareAttacked(bt, sq, BLACK) != res.b {
-			t.Error("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(bt, sq, BLACK))
+		if rpt1.IsSquareAttacked(sq, BLACK) != res.b {
+			t.Error("Square", sq.String(), "is attacked by BLACK :", rpt1.IsSquareAttacked(sq, BLACK))
 		}
 	}
 

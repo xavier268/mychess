@@ -1,34 +1,34 @@
 package position
 
-func (p Position) GetKnightMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
-	return bt.KnightAttacks[sq] & ^p.colOcc[turn]
+func (p Position) GetKnightMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
+	return BT.KnightAttacks[sq] & ^p.colOcc[turn]
 }
 
 // Not including castling ...
-func (p Position) GetKingMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
-	return bt.KingAttacks[sq] & ^p.colOcc[turn]
+func (p Position) GetKingMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
+	return BT.KingAttacks[sq] & ^p.colOcc[turn]
 }
 
-func (p Position) GetRookMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
+func (p Position) GetRookMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	rankAttacks := bt.RookAttackSetRank[sq][occ&bt.RookMaskRank[sq]]
-	fileAttacks := bt.RookAttackSetFile[sq][occ&bt.RookMaskFile[sq]]
+	rankAttacks := BT.RookAttackSetRank[sq][occ&BT.RookMaskRank[sq]]
+	fileAttacks := BT.RookAttackSetFile[sq][occ&BT.RookMaskFile[sq]]
 	return (rankAttacks | fileAttacks) & ^p.colOcc[turn]
 }
 
-func (p Position) GetBishopMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
+func (p Position) GetBishopMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	neAttacks := bt.BishopAttackSetNE[sq][occ&bt.BishopMaskNE[sq]]
-	nwAttacks := bt.BishopAttackSetNW[sq][occ&bt.BishopMaskNW[sq]]
+	neAttacks := BT.BishopAttackSetNE[sq][occ&BT.BishopMaskNE[sq]]
+	nwAttacks := BT.BishopAttackSetNW[sq][occ&BT.BishopMaskNW[sq]]
 	return (neAttacks | nwAttacks) & ^p.colOcc[turn]
 }
 
 // GetPawnMovesFromSquareBB returns all pawn moves including en passant.
 // The PawnAttackSet map handles forward-move blocking and regular captures.
 // En passant is detected via phantom pawns (in pawnOcc but not in colOcc) at rank 0 (white EP) or rank 7 (black EP).
-func (p Position) GetPawnMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
+func (p Position) GetPawnMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
-	res = bt.PawnAttackSet[turn][sq][occ&bt.PawnMask[turn][sq]] & ^p.colOcc[turn]
+	res = BT.PawnAttackSet[turn][sq][occ&BT.PawnMask[turn][sq]] & ^p.colOcc[turn]
 
 	// En passant: phantom pawns are in pawnOcc but not in colOcc
 	phantoms := p.pawnOcc & ^occ
@@ -53,38 +53,36 @@ func (p Position) GetPawnMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) 
 	return res
 }
 
-func (p Position) GetQueenMovesFromSquareBB(bt *BigTable, turn uint8, sq Square) (res Bitboard) {
-	return (p.GetBishopMovesFromSquareBB(bt, turn, sq) | p.GetRookMovesFromSquareBB(bt, turn, sq))
+func (p Position) GetQueenMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
+	return (p.GetBishopMovesFromSquareBB(turn, sq) | p.GetRookMovesFromSquareBB(turn, sq))
 }
 
 // All moves from the specified position in a single bitboard
-func (p Position) GetMovesBB(bt *BigTable, sq Square) (res Bitboard) {
+func (p Position) GetMovesBB(sq Square) (res Bitboard) {
 	turn := p.status.GetTurn()
 
 	switch {
 	case p.pawnOcc&(1<<sq) != 0:
-		return p.GetPawnMovesFromSquareBB(bt, turn, sq)
+		return p.GetPawnMovesFromSquareBB(turn, sq)
 	case p.knightOcc&(1<<sq) != 0:
-		return p.GetKnightMovesFromSquareBB(bt, turn, sq)
+		return p.GetKnightMovesFromSquareBB(turn, sq)
 	case p.bishopOcc&p.rookOcc&(1<<sq) != 0:
-		return p.GetQueenMovesFromSquareBB(bt, turn, sq)
+		return p.GetQueenMovesFromSquareBB(turn, sq)
 	case p.bishopOcc&(1<<sq) != 0:
-		return p.GetBishopMovesFromSquareBB(bt, turn, sq)
+		return p.GetBishopMovesFromSquareBB(turn, sq)
 	case p.rookOcc&(1<<sq) != 0:
-		return p.GetRookMovesFromSquareBB(bt, turn, sq)
+		return p.GetRookMovesFromSquareBB(turn, sq)
 	case sq == p.status.GetKingPosition(turn):
-		return p.GetKingMovesFromSquareBB(bt, turn, sq)
+		return p.GetKingMovesFromSquareBB(turn, sq)
 	}
 	return Bitboard(0)
 }
 
 // Compute if the specified square is currently under attack from specified color (by)
-func (p Position) IsSquareAttacked(bt *BigTable, sq Square, by uint8) bool {
-	return (p.GetKnightMovesFromSquareBB(bt, 1^by, sq)&p.colOcc[by]&p.knightOcc != 0) ||
-		(p.GetBishopMovesFromSquareBB(bt, 1^by, sq)&p.colOcc[by]&p.bishopOcc != 0) ||
-		(p.GetRookMovesFromSquareBB(bt, 1^by, sq)&p.colOcc[by]&p.rookOcc != 0) ||
-		(p.GetKingMovesFromSquareBB(bt, 1^by, sq)&(1<<p.status.GetKingPosition(by)) != 0) ||
-		(p.GetPawnMovesFromSquareBB(bt, 1^by, sq)&p.colOcc[by]&p.pawnOcc != 0)
+func (p Position) IsSquareAttacked(sq Square, by uint8) bool {
+	return (p.GetKnightMovesFromSquareBB(1^by, sq)&p.colOcc[by]&p.knightOcc != 0) ||
+		(p.GetBishopMovesFromSquareBB(1^by, sq)&p.colOcc[by]&p.bishopOcc != 0) ||
+		(p.GetRookMovesFromSquareBB(1^by, sq)&p.colOcc[by]&p.rookOcc != 0) ||
+		(p.GetKingMovesFromSquareBB(1^by, sq)&(1<<p.status.GetKingPosition(by)) != 0) ||
+		(p.GetPawnMovesFromSquareBB(1^by, sq)&p.colOcc[by]&p.pawnOcc != 0)
 }
-
-// TODO - handle castling !
