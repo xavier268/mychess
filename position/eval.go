@@ -35,12 +35,12 @@ func (p Position) Value() Score {
 	s := Score(0)
 
 	// If I am about to play and could capture opponent king, I won !
-	if p.IsSquareAttacked(p.status.GetKingPosition(t)) {
+	if p.IsSquareAttacked(p.status.GetKingPosition(1^t), t) {
 		return WON
 	}
 
-	// If I am about to play and I am currently under check, add 100 malus points
-	if p.IsSquareAttacked(p.status.GetKingPosition(1 ^ t)) {
+	// If I am about to play and I am currently under check by opponent, add 100 malus points
+	if p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t) {
 		s += Score(-100)
 	}
 
