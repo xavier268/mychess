@@ -16,7 +16,7 @@ import "mychess/position"
 // Interruption : AlphaBeta consulte g.Ctx à chaque nœud. Dès que le contexte est annulé,
 // il retourne 0 immédiatement et remonte la pile sans écrire dans Z, laissant la table
 // dans l'état cohérent issu de la dernière profondeur entièrement terminée.
-func (g *Game) AlphaBeta(alpha, beta position.Score, depth int16) position.Score {
+func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Score {
 
 	// ── VÉRIFICATION DU CONTEXTE ───────────────────────────────────────────────
 	// ctx.Err() est goroutine-safe et retourne immédiatement après annulation
@@ -130,7 +130,7 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth int16) position.Score
 		Score: bestScore,
 		Best:  bestMove,
 		Depth: depth,
-		Age:   uint8(len(g.History)),
+		Age:   uint16(len(g.History)),
 	}
 	if bestScore <= oldAlpha {
 		newEntry.ScoreType = UPPER

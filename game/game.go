@@ -37,9 +37,9 @@ type ZEntry struct {
 	// Score type : UPPER, LOWER, EXACT
 	ScoreType ScoreType
 	// Depth of analysis at this stage
-	Depth int16
+	Depth uint16
 	// When was this entry last updated ?
-	Age uint8
+	Age uint16
 }
 
 type ScoreType uint8
@@ -72,7 +72,7 @@ func NewGame(ctx context.Context) *Game {
 //
 // mu est acquis ici, dans la goroutine appelante, avant le go — ce qui garantit
 // qu'aucune fenêtre de race n'existe entre le lancement et la prise du verrou.
-func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth int16) {
+func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth uint16) {
 	// Stoppe l'éventuelle analyse précédente.
 	if g.cancelAnalysis != nil {
 		g.cancelAnalysis()
@@ -102,10 +102,10 @@ func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth int16) {
 // Seules les profondeurs entièrement terminées sont reflétées dans la table.
 //
 // Retourne la dernière profondeur entièrement explorée (0 si aucune n'a pu l'être).
-func (g *Game) Analysis(ctx context.Context, maxDepth int16) (depth int16) {
+func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
 	g.Ctx = ctx
 
-	for d := int16(1); d <= maxDepth; d++ {
+	for d := uint16(1); d <= maxDepth; d++ {
 		// Fenêtre initiale maximale [LOST, WON] : recherche complète sans aspiration.
 		g.AlphaBeta(position.LOST, position.WON, d)
 
@@ -226,7 +226,7 @@ func (g *Game) PruneZ(size int) {
 	// On ne stocke que (hash, age) pour limiter la mémoire utilisée.
 	type entry struct {
 		hash uint64
-		age  uint8
+		age  uint16
 	}
 	entries := make([]entry, 0, len(g.Z))
 	for hash, e := range g.Z {
