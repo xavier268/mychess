@@ -9,7 +9,7 @@ import (
 type Game struct {
 	// The current position of the game (includes the turn)
 	Position position.Position
-	// past moves until now
+	// past moves played until now
 	History []position.Move
 	// Context for game
 	Ctx context.Context
@@ -18,15 +18,25 @@ type Game struct {
 }
 
 type ZEntry struct {
-	// Upper avalaible score
-	Upper position.Score
-	// Lower available score
-	Lower position.Score
-	// Current best move identified
+	// Best move found until now (or null move)
 	Best position.Move
+	// Score (upper, lower, exact)
+	Score position.Score
+	// Score type : UPPER, LOWER, EXACT
+	ScoreType ScoreType
 	// Depth of analysis at this stage
-	Depth int
+	Depth int16
+	// When was this entry last updated ?
+	Age uint8
 }
+
+type ScoreType uint8
+
+const (
+	UPPER ScoreType = iota
+	LOWER
+	EXACT
+)
 
 func NewGame(ctx context.Context) *Game {
 	if ctx == nil {
