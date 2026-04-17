@@ -2,55 +2,80 @@ package position
 
 import "math/bits"
 
-// Score of a given position, from the point of view of the player who should play next (turn player)
-// The larger, the better.
+// Score d'une position du point de vue du joueur qui doit jouer (turn player).
+// Plus le score est élevé, meilleure est la position pour ce joueur.
 type Score int16
 
 var (
-	WON  Score = 30_000  // the player who is expected to play has already won.
-	LOST Score = -30_000 // The player who is about to play has already lost. Check mate.
-	DRAW Score = 0
+	WON  Score = 30_000  // Le joueur courant a gagné (roi adverse prenable).
+	LOST Score = -30_000 // Le joueur courant est mat.
+	DRAW Score = 0       // Partie nulle (pat, répétition, etc.).
 )
 
-// La valeur des pièces de la position.
-// Du point de vue de celui qui va jouer (le turn)
-// Le pion (10 point) ; le fou (30 points) ;
-// le cavalier (30 points) ; la tour (50 points) ;
-// la dame (90 points).
+// MaterialValue calcule l'avantage matériel du joueur courant.
+//
+// Barème (en points, 1 pion = 10) :
+//   - Pion   : 10
+//   - Fou    : 30
+//   - Cavalier : 30
+//   - Tour   : 50
+//   - Dame   : 90
+//
+// Représentation interne : une dame est stockée à la fois dans rookOcc ET bishopOcc.
+// Son score est donc : 50 (tour) + 30 (fou) + 10 (bonus dame) = 90.
 func (p Position) MaterialValue() Score {
 
 	t := p.status.GetTurn()
+
 	s := 10*bits.OnesCount(uint(p.pawnOcc&p.colOcc[t])) - 10*bits.OnesCount(uint(p.pawnOcc&p.colOcc[1^t]))
 	s += 30*bits.OnesCount(uint(p.bishopOcc&p.colOcc[t])) - 30*bits.OnesCount(uint(p.bishopOcc&p.colOcc[1^t]))
 	s += 30*bits.OnesCount(uint(p.knightOcc&p.colOcc[t])) - 30*bits.OnesCount(uint(p.knightOcc&p.colOcc[1^t]))
-	s += 30*bits.OnesCount(uint(p.rookOcc&p.colOcc[t])) - 30*bits.OnesCount(uint(p.rookOcc&p.colOcc[1^t]))
-	s += 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[t])) - 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[1^t])) // dame
+	// Les tours pures (rookOcc sans bishopOcc) valent 50.
+	// Les dames (rookOcc ∩ bishopOcc) sont comptées ici à 50, puis à 30 (fou), puis +10 ci-dessous → total 90.
+	s += 50*bits.OnesCount(uint(p.rookOcc&p.colOcc[t])) - 50*bits.OnesCount(uint(p.rookOcc&p.colOcc[1^t]))
+	// Bonus dame : 10 points supplémentaires pour les pièces dans rookOcc ∩ bishopOcc (les dames).
+	s += 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[t])) - 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[1^t]))
 	return Score(s)
 }
 
-// MaterialValue + some bonus points for checks, center occupancy, castling capabilities, ...
+// IsCheck retourne true si le joueur courant est en échec.
+func (p Position) IsCheck() bool {
+	t := p.status.GetTurn()
+	return p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t)
+}
+
+// Value évalue la position de manière statique (appelée à profondeur 0 dans l'alpha/beta).
+// Retourne le score du point de vue du joueur courant : positif = bon pour lui.
+//
+// Composantes du score :
+//   - WON  si le joueur courant peut capturer le roi adverse (position illégale de l'adversaire)
+//   - Malus de 10 si le joueur courant est en échec
+//   - +1 par droit de roque disponible (mobilité future)
+//   - +1 par case du centre occupée (d4, d5, e4, e5)
+//   - Avantage matériel (voir MaterialValue)
 func (p Position) Value() Score {
 
 	t := p.status.GetTurn()
 	s := Score(0)
 
-	// If I am about to play and could capture opponent king, I won !
+	// Si l'adversaire a laissé son roi en prise, le joueur courant gagne.
+	// (Cela signifie que l'adversaire a joué un coup illégal.)
 	if p.IsSquareAttacked(p.status.GetKingPosition(1^t), t) {
 		return WON
 	}
 
-	// If I am about to play and I am currently under check by opponent, add 10 malus points
+	// Malus si le joueur courant est sous échec : la position est dangereuse.
 	if p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t) {
 		s += Score(-10)
 	}
 
-	// add 1 points for each castling capabilities
+	// Bonus pour chaque droit de roque encore disponible (avantage positionnel futur).
 	s += Score(bits.OnesCount(uint(p.status.KingStatus[t]&CanCastle)) - bits.OnesCount(uint(p.status.KingStatus[1^t]&CanCastle)))
 
-	// add 1 points for each square occupying the center
+	// Bonus pour chaque case centrale occupée (d4, d5, e4, e5).
 	s += Score(bits.OnesCount(uint(p.colOcc[t]&Center())) - bits.OnesCount(uint(p.colOcc[1^t]&Center())))
 
-	// add material value
+	// Avantage matériel.
 	s += p.MaterialValue()
 
 	return s

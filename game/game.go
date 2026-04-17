@@ -3,18 +3,28 @@ package game
 import (
 	"context"
 	"mychess/position"
+	"sync"
 )
 
-// A Game capture the context of an on-going game.
+// Game capture le contexte d'une partie en cours.
 type Game struct {
-	// The current position of the game (includes the turn)
+	// Position courante (inclut le tour à jouer).
 	Position position.Position
-	// past moves played until now
+	// Historique des coups joués depuis le début de la partie.
 	History []position.Move
-	// Context for game
+	// Contexte courant (utilisé par AlphaBeta pour détecter l'annulation).
 	Ctx context.Context
-	// ZobristHash -> ZEntry
+	// Table de transposition : Zobrist hash → ZEntry.
 	Z map[uint64]ZEntry
+
+	// mu est tenu par la goroutine d'analyse pendant toute sa durée.
+	// Play() et AnalysisAsync() se synchronisent via ce verrou.
+	mu sync.Mutex
+
+	// cancelAnalysis annule le contexte de l'analyse en cours.
+	// Nil si aucune analyse n'a jamais été lancée.
+	// Appeler cancel plusieurs fois est un no-op (garanti par le package context).
+	cancelAnalysis context.CancelFunc
 }
 
 type ZEntry struct {
@@ -48,4 +58,88 @@ func NewGame(ctx context.Context) *Game {
 		Ctx:      ctx,
 		Z:        make(map[uint64]ZEntry, 1000),
 	}
+}
+
+// AnalysisAsync lance l'analyse en arrière-plan.
+//
+// Si une analyse est déjà en cours, elle est d'abord annulée et on attend
+// qu'elle se termine avant de lancer la nouvelle (via mu.Lock()).
+//
+// Un sous-contexte est créé depuis parentCtx : son cancel est stocké dans
+// g.cancelAnalysis pour que Play() puisse stopper l'analyse proprement.
+//
+// mu est acquis ici, dans la goroutine appelante, avant le go — ce qui garantit
+// qu'aucune fenêtre de race n'existe entre le lancement et la prise du verrou.
+func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth int16) {
+	// Stoppe l'éventuelle analyse précédente.
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+
+	// Crée un sous-contexte annulable, indépendant de parentCtx.
+	// Play() utilisera ce cancel pour interrompre proprement l'analyse.
+	ctx, cancel := context.WithCancel(parentCtx)
+	g.cancelAnalysis = cancel
+
+	// Acquiert le verrou AVANT de lancer la goroutine.
+	// Dès le retour de AnalysisAsync, mu est tenu : tout appel à Play()
+	// bloquera sur mu.Lock() jusqu'à la fin effective de l'analyse.
+	g.mu.Lock()
+	go func() {
+		defer g.mu.Unlock()
+		g.Analysis(ctx, maxDepth)
+	}()
+}
+
+// Analysis remplit la table de transposition Z par approfondissement itératif :
+// elle appelle AlphaBeta pour des profondeurs croissantes (1, 2, 3, …, maxDepth)
+// et s'arrête dès que le contexte expire ou que maxDepth est atteinte.
+//
+// Garantie de cohérence : si le contexte expire en cours d'analyse à la profondeur d,
+// AlphaBeta détecte l'interruption nœud par nœud et remonte sans rien écrire dans Z.
+// Seules les profondeurs entièrement terminées sont reflétées dans la table.
+//
+// Retourne la dernière profondeur entièrement explorée (0 si aucune n'a pu l'être).
+func (g *Game) Analysis(ctx context.Context, maxDepth int16) (depth int16) {
+	g.Ctx = ctx
+
+	for d := int16(1); d <= maxDepth; d++ {
+		// Fenêtre initiale maximale [LOST, WON] : recherche complète sans aspiration.
+		g.AlphaBeta(position.LOST, position.WON, d)
+
+		if ctx.Err() != nil {
+			// Le niveau d a été interrompu : la table Z n'a pas été modifiée pour ce niveau.
+			// On retourne la dernière profondeur entièrement terminée.
+			return depth
+		}
+
+		// Niveau d terminé avec succès : on le mémorise comme dernier niveau complet.
+		depth = d
+	}
+	return // maxDepth atteinte sans interruption
+}
+
+// Play joue le coup m : met à jour la position et l'ajoute à l'historique.
+//
+// Si une analyse asynchrone est en cours, Play l'arrête proprement avant de jouer :
+//  1. Cancel du contexte d'analyse → AlphaBeta remonte nœud par nœud sans corrompre Z.
+//  2. mu.Lock() attend la fin effective de la goroutine (bref, quelques µs).
+//  3. Le coup est appliqué.
+//
+// La table Z n'est pas vidée : ses entrées restent exploitables pour la prochaine analyse.
+func (g *Game) Play(m position.Move) {
+	// Annule l'analyse en cours le cas échéant.
+	// No-op si cancelAnalysis est nil ou si le contexte est déjà annulé.
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+
+	// Attend que la goroutine d'analyse relâche le verrou.
+	// Si aucune analyse ne tourne, Lock() réussit immédiatement.
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	var enrichedMove position.Move
+	g.Position, enrichedMove = g.Position.DoMove(m)
+	g.History = append(g.History, enrichedMove)
 }
