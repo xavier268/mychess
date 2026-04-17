@@ -2,7 +2,9 @@ package game
 
 import (
 	"context"
+	"errors"
 	"mychess/position"
+	"sort"
 	"sync"
 )
 
@@ -142,4 +144,105 @@ func (g *Game) Play(m position.Move) {
 	var enrichedMove position.Move
 	g.Position, enrichedMove = g.Position.DoMove(m)
 	g.History = append(g.History, enrichedMove)
+}
+
+// RetractPlay annule le dernier coup joué et restaure la position précédente.
+//
+// Si une analyse asynchrone est en cours, elle est d'abord stoppée proprement
+// (cancel + attente de la goroutine) — même comportement que Play et AutoPlay.
+//
+// Retourne une erreur si l'historique est vide (aucun coup à annuler).
+func (g *Game) RetractPlay() error {
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if len(g.History) == 0 {
+		return errors.New("aucun coup à annuler : l'historique est vide")
+	}
+
+	// Dépile le dernier coup. Il contient toutes les informations nécessaires
+	// à UndoMove (PrevStatus, PrevHash, pièce capturée, etc.).
+	lastMove := g.History[len(g.History)-1]
+	g.History = g.History[:len(g.History)-1]
+
+	g.Position = g.Position.UndoMove(lastMove)
+	return nil
+}
+
+// AutoPlay joue le meilleur coup connu pour la position courante, d'après la table Z.
+//
+// Même comportement que Play vis-à-vis de l'analyse asynchrone :
+//  1. Cancel du contexte si une analyse tourne.
+//  2. mu.Lock() attend la fin effective de la goroutine.
+//  3. Le meilleur coup est lu dans Z, puis joué.
+//
+// Retourne une erreur si aucun coup n'est disponible (aucune analyse lancée,
+// ou position non encore visitée dans Z).
+func (g *Game) AutoPlay() error {
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Le meilleur coup pour la position courante est dans l'entrée Z indexée par le hash.
+	entry, found := g.Z[g.Position.Hash]
+	if !found || entry.Best == (position.Move{}) {
+		return errors.New("aucun coup disponible : lancez une analyse avant d'appeler AutoPlay")
+	}
+
+	var enrichedMove position.Move
+	g.Position, enrichedMove = g.Position.DoMove(entry.Best)
+	g.History = append(g.History, enrichedMove)
+	return nil
+}
+
+// PruneZ supprime les entrées les plus anciennes de la table Z jusqu'à ce que
+// sa taille soit inférieure à size. Si une analyse asynchrone est en cours,
+// elle est d'abord stoppée proprement.
+//
+// L'ancienneté d'une entrée est déterminée par son champ Age, qui vaut
+// len(g.History) au moment où l'entrée a été écrite : les petites valeurs
+// correspondent aux positions analysées tôt dans la partie.
+//
+// Complexité : O(n log n) en temps, O(n) en mémoire supplémentaire (n = len(Z)).
+func (g *Game) PruneZ(size int) {
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if len(g.Z) <= size {
+		return
+	}
+
+	// Extrait les clés avec leur âge dans une slice pour pouvoir les trier.
+	// On ne stocke que (hash, age) pour limiter la mémoire utilisée.
+	type entry struct {
+		hash uint64
+		age  uint8
+	}
+	entries := make([]entry, 0, len(g.Z))
+	for hash, e := range g.Z {
+		entries = append(entries, entry{hash, e.Age})
+	}
+
+	// Trie par âge croissant : les plus anciens (petit Age) en premier.
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].age < entries[j].age
+	})
+
+	// Supprime depuis le début (les plus anciens) jusqu'à atteindre size.
+	for _, e := range entries {
+		if len(g.Z) <= size {
+			break
+		}
+		delete(g.Z, e.hash)
+	}
 }
