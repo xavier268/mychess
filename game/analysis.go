@@ -1,6 +1,9 @@
 package game
 
-import "mychess/position"
+import (
+	"mychess/position"
+	"time"
+)
 
 // AlphaBeta implémente l'algorithme Negamax avec élagage alpha-bêta et table de transposition.
 //
@@ -77,9 +80,15 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Scor
 	// OPTIMISATION — Mise en tête du meilleur coup issu de la table de transposition.
 	// Les coupures bêta sont trouvées plus tôt si on évalue d'abord le meilleur coup connu,
 	// ce qui réduit considérablement le nombre de nœuds à explorer.
-	if found && (entry.Best != position.Move{}) {
+	//
+	// Attention : entry.Best est enrichi (champs Undo remplis par DoMove) alors que
+	// les coups de moves sont vierges (GetMoveList ne remplit pas les champs Undo).
+	// La comparaison doit porter UNIQUEMENT sur From / To / Promotion.
+	if found && (entry.Best.From != entry.Best.To || entry.Best.Promotion != position.EMPTY) {
 		for i, move := range moves {
-			if move == entry.Best {
+			if move.From == entry.Best.From &&
+				move.To == entry.Best.To &&
+				move.Promotion == entry.Best.Promotion {
 				moves[0], moves[i] = moves[i], moves[0]
 				break
 			}
@@ -130,7 +139,7 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Scor
 		Score: bestScore,
 		Best:  bestMove,
 		Depth: depth,
-		Age:   uint16(len(g.History)),
+		Age:   time.Now().UnixNano(),
 	}
 	if bestScore <= oldAlpha {
 		newEntry.ScoreType = UPPER
@@ -142,8 +151,18 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Scor
 
 	// On n'écrase une entrée existante que si la nouvelle est au moins aussi profonde.
 	// Remplacer une analyse à profondeur 5 par une à profondeur 2 ferait perdre du travail.
-	if existing, ok := g.Z[hash]; !ok || newEntry.Depth >= existing.Depth {
+	//
+	// Plafond strict : si la table est pleine, on ne crée PAS de nouvelles entrées.
+	// On peut toujours mettre à jour une entrée existante (len(Z) reste constant).
+	// Cela évite que Z croisse de façon explosive en milieu de profondeur avant
+	// que pruneZLocked ne soit appelé en fin de niveau.
+	existing, ok := g.Z[hash]
+	if ok && newEntry.Depth >= existing.Depth {
 		g.Z[hash] = newEntry
+		g.zSize.Store(int64(len(g.Z)))
+	} else if !ok && len(g.Z) < maxZEntries {
+		g.Z[hash] = newEntry
+		g.zSize.Store(int64(len(g.Z)))
 	}
 
 	return bestScore

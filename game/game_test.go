@@ -334,7 +334,7 @@ func TestPruneZ_removesOldestEntries(t *testing.T) {
 
 	// 6 entrées avec Ages 0..5 (hashes distincts pour éviter les collisions).
 	for i := uint64(0); i < 6; i++ {
-		g.Z[i] = ZEntry{Age: uint16(i), Depth: 1}
+		g.Z[i] = ZEntry{Age: int64(i), Depth: 1}
 	}
 
 	// Purge à 3 : Ages 0, 1, 2 doivent disparaître ; Ages 3, 4, 5 doivent rester.

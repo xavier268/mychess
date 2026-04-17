@@ -44,6 +44,11 @@ func (p Position) IsCheck() bool {
 	return p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t)
 }
 
+// Turn retourne le camp qui doit jouer : WHITE (0) ou BLACK (1).
+func (p Position) Turn() uint8 {
+	return p.status.GetTurn()
+}
+
 // Value évalue la position de manière statique (appelée à profondeur 0 dans l'alpha/beta).
 // Retourne le score du point de vue du joueur courant : positif = bon pour lui.
 //
