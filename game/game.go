@@ -132,6 +132,11 @@ func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth uint16) {
 //
 // Retourne la dernière profondeur entièrement explorée (0 si aucune n'a pu l'être).
 func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
+	// Si Z est déjà pleine avant de démarrer (entrées d'autres positions), on élague
+	// d'emblée pour garantir que le premier AlphaBeta puisse écrire l'entrée racine.
+	if len(g.Z) >= maxZEntries {
+		g.pruneZLocked(maxZEntries / 2)
+	}
 	for d := uint16(1); d <= maxDepth; d++ {
 		// Fenêtre initiale maximale [LOST, WON] : recherche complète sans aspiration.
 		g.AlphaBeta(ctx, position.LOST, position.WON, d)
@@ -152,7 +157,7 @@ func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
 		}
 		// Élagage automatique : évite la croissance non bornée de Z.
 		// pruneZLocked peut être appelé ici car l'analyse tient déjà mu.
-		if len(g.Z) > maxZEntries {
+		if len(g.Z) >= maxZEntries {
 			g.pruneZLocked(maxZEntries / 2)
 		}
 	}
