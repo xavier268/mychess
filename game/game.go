@@ -15,8 +15,6 @@ type Game struct {
 	Position position.Position
 	// Historique des coups joués depuis le début de la partie.
 	History []position.Move
-	// Contexte courant (utilisé par AlphaBeta pour détecter l'annulation).
-	Ctx context.Context
 	// Table de transposition : Zobrist hash → ZEntry.
 	Z map[uint64]ZEntry
 
@@ -65,14 +63,10 @@ const (
 	EXACT
 )
 
-func NewGame(ctx context.Context) *Game {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func NewGame() *Game {
 	return &Game{
 		Position: position.StartPosition,
 		History:  make([]position.Move, 0, 100),
-		Ctx:      ctx,
 		Z:        make(map[uint64]ZEntry, 1000),
 	}
 }
@@ -138,11 +132,9 @@ func (g *Game) AnalysisAsync(parentCtx context.Context, maxDepth uint16) {
 //
 // Retourne la dernière profondeur entièrement explorée (0 si aucune n'a pu l'être).
 func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
-	g.Ctx = ctx
-
 	for d := uint16(1); d <= maxDepth; d++ {
 		// Fenêtre initiale maximale [LOST, WON] : recherche complète sans aspiration.
-		g.AlphaBeta(position.LOST, position.WON, d)
+		g.AlphaBeta(ctx, position.LOST, position.WON, d)
 
 		if ctx.Err() != nil {
 			// Le niveau d a été interrompu : la table Z n'a pas été modifiée pour ce niveau.

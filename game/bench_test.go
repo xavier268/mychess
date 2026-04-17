@@ -19,7 +19,7 @@ func BenchmarkAnalysis(b *testing.B) {
 	for _, depth := range []uint16{1, 2, 3, 4, 5, 6} {
 		b.Run(fmt.Sprintf("depth=%d", depth), func(b *testing.B) {
 			for b.Loop() {
-				g := NewGame(context.Background())
+				g := NewGame()
 				g.Analysis(context.Background(), depth)
 			}
 		})
@@ -37,8 +37,8 @@ func BenchmarkAlphaBeta(b *testing.B) {
 	for _, depth := range []uint16{1, 2, 3, 4, 5, 6} {
 		b.Run(fmt.Sprintf("depth=%d", depth), func(b *testing.B) {
 			for b.Loop() {
-				g := NewGame(context.Background())
-				g.AlphaBeta(position.LOST, position.WON, depth)
+				g := NewGame()
+				g.AlphaBeta(context.Background(), position.LOST, position.WON, depth)
 			}
 		})
 	}

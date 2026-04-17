@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"mychess/position"
 	"time"
 )
@@ -16,16 +17,16 @@ import (
 //     Si le score retourné >= beta, l'adversaire ignorera cette branche (coupure bêta).
 //   - depth : profondeur restante à analyser (0 = évaluation statique).
 //
-// Interruption : AlphaBeta consulte g.Ctx à chaque nœud. Dès que le contexte est annulé,
+// Interruption : AlphaBeta consulte ctx à chaque nœud. Dès que le contexte est annulé,
 // il retourne 0 immédiatement et remonte la pile sans écrire dans Z, laissant la table
 // dans l'état cohérent issu de la dernière profondeur entièrement terminée.
-func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Score {
+func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth uint16) position.Score {
 
 	// ── VÉRIFICATION DU CONTEXTE ───────────────────────────────────────────────
 	// ctx.Err() est goroutine-safe et retourne immédiatement après annulation
 	// (valeur mise en cache, lecture atomique ~5 ns). On peut l'appeler à chaque nœud
 	// sans surcoût mesurable. Pas besoin d'un flag intermédiaire.
-	if g.Ctx.Err() != nil {
+	if ctx.Err() != nil {
 		return 0 // on remonte sans toucher à Z
 	}
 
@@ -104,7 +105,7 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Scor
 		// Negamax : on appelle récursivement pour l'adversaire.
 		// La fenêtre est inversée et niée : [alpha, beta] → [-beta, -alpha].
 		// Le score retourné est du point de vue de l'adversaire, on le nie pour l'avoir du nôtre.
-		score := -g.AlphaBeta(-beta, -alpha, depth-1)
+		score := -g.AlphaBeta(ctx, -beta, -alpha, depth-1)
 
 		// IMPORTANT : UndoMove retourne la nouvelle position restaurée — il faut capturer le résultat.
 		// (Position est un type valeur en Go ; ignorer le retour laisserait g.Position inchangée.)
@@ -112,7 +113,7 @@ func (g *Game) AlphaBeta(alpha, beta position.Score, depth uint16) position.Scor
 
 		// Si le contexte a expiré pendant l'appel récursif, on remonte sans stocker.
 		// Le résultat partiel (certains coups explorés, d'autres non) ne doit pas polluer Z.
-		if g.Ctx.Err() != nil {
+		if ctx.Err() != nil {
 			return 0
 		}
 

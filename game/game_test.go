@@ -39,7 +39,7 @@ func mateInOneGame(t *testing.T) *Game {
 	pos.AddKing(position.BLACK, "h8")
 	pos.Hash = position.DefaultZT.HashPosition(pos)
 
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Position = pos
 	return g
 }
@@ -56,7 +56,7 @@ func firstLegalMove(g *Game) position.Move {
 // ── NewGame ──────────────────────────────────────────────────────────────────
 
 func TestNewGame_initialState(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	if g.Position != position.StartPosition {
 		t.Error("NewGame: la position initiale devrait être StartPosition")
 	}
@@ -71,7 +71,7 @@ func TestNewGame_initialState(t *testing.T) {
 // ── Play ─────────────────────────────────────────────────────────────────────
 
 func TestPlay_updatesPositionAndHistory(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	before := g.Position
 
 	g.Play(firstLegalMove(g))
@@ -87,7 +87,7 @@ func TestPlay_updatesPositionAndHistory(t *testing.T) {
 // ── RetractPlay ──────────────────────────────────────────────────────────────
 
 func TestRetractPlay_restoresPosition(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	before := g.Position
 
 	g.Play(firstLegalMove(g))
@@ -104,14 +104,14 @@ func TestRetractPlay_restoresPosition(t *testing.T) {
 }
 
 func TestRetractPlay_errorOnEmptyHistory(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	if err := g.RetractPlay(); err == nil {
 		t.Error("RetractPlay: devrait retourner une erreur si l'historique est vide")
 	}
 }
 
 func TestRetractPlay_doublePlayDoubleRetract(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	before := g.Position
 
 	g.Play(firstLegalMove(g))
@@ -135,14 +135,14 @@ func TestRetractPlay_doublePlayDoubleRetract(t *testing.T) {
 // ── AutoPlay ─────────────────────────────────────────────────────────────────
 
 func TestAutoPlay_errorWithoutAnalysis(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	if err := g.AutoPlay(); err == nil {
 		t.Error("AutoPlay: devrait retourner une erreur quand Z est vide")
 	}
 }
 
 func TestAutoPlay_playsAfterAnalysis(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Analysis(context.Background(), 1)
 
 	before := g.Position
@@ -160,7 +160,7 @@ func TestAutoPlay_playsAfterAnalysis(t *testing.T) {
 // ── Analysis ─────────────────────────────────────────────────────────────────
 
 func TestAnalysis_populatesZ(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
 	if len(g.Z) == 0 {
@@ -169,7 +169,7 @@ func TestAnalysis_populatesZ(t *testing.T) {
 }
 
 func TestAnalysis_rootEntryPresent(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
 	entry, found := g.Z[g.Position.Hash]
@@ -185,7 +185,7 @@ func TestAnalysis_rootEntryPresent(t *testing.T) {
 }
 
 func TestAnalysis_returnedDepth(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	depth := g.Analysis(context.Background(), 2)
 	if depth != 2 {
 		t.Errorf("Analysis: devrait retourner 2 pour une recherche complète, obtenu %d", depth)
@@ -193,7 +193,7 @@ func TestAnalysis_returnedDepth(t *testing.T) {
 }
 
 func TestAnalysis_deeperSearchOverwritesShallower(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 
 	g.Analysis(context.Background(), 1)
 	depthAfter1 := g.Z[g.Position.Hash].Depth
@@ -208,7 +208,7 @@ func TestAnalysis_deeperSearchOverwritesShallower(t *testing.T) {
 }
 
 func TestAnalysis_cancelledBeforeStart(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // annulé avant même de démarrer
 
@@ -231,7 +231,7 @@ func TestAnalysis_cancelledBeforeStart(t *testing.T) {
 // pour permettre l'annulation à mi-chemin. On attend suffisamment pour que la profondeur 1
 // se termine (~1 ms en pratique), puis on annule avant la profondeur 2.
 func TestAnalysis_zCoherenceAfterCancel(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	ch := make(chan uint16, 1)
@@ -299,7 +299,7 @@ func TestAnalysis_bestMoveLeadsToCheck(t *testing.T) {
 // ── PruneZ ───────────────────────────────────────────────────────────────────
 
 func TestPruneZ_reducesToTargetSize(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
 	initial := len(g.Z)
@@ -315,7 +315,7 @@ func TestPruneZ_reducesToTargetSize(t *testing.T) {
 }
 
 func TestPruneZ_noOpWhenSmallEnough(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
 	before := len(g.Z)
@@ -330,7 +330,7 @@ func TestPruneZ_noOpWhenSmallEnough(t *testing.T) {
 // TestPruneZ_removesOldestEntries injecte des entrées avec des Ages connus
 // et vérifie que PruneZ supprime d'abord les plus anciennes (Age le plus bas).
 func TestPruneZ_removesOldestEntries(t *testing.T) {
-	g := NewGame(context.Background())
+	g := NewGame()
 
 	// 6 entrées avec Ages 0..5 (hashes distincts pour éviter les collisions).
 	for i := uint64(0); i < 6; i++ {

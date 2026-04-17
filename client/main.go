@@ -79,7 +79,7 @@ type model struct {
 
 func initialModel() model {
 	ctx, cancel := context.WithCancel(context.Background())
-	g := game.NewGame(ctx)
+	g := game.NewGame()
 	m := model{g: g, ctx: ctx, cancel: cancel, displayPos: g.Position}
 	g.AnalysisAsync(ctx, analysisDepth)
 	return m
