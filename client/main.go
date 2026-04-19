@@ -234,7 +234,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tick() // démarre la boucle de tick
 			}
 			return m, nil // la boucle s'arrêtera au prochain tickMsg
-
+		case "x":
+			m.cancel()
+			return m, tea.Quit
+		case "a":
+			err := m.g.AutoPlay()
+			if err != nil {
+				m.message = errStyle.Render("autoplay: " + err.Error())
+			} else {
+				m.displayPos = m.g.Position
+				m.history = buildHistory(m.g.History)
+				m.message = okStyle.Render("coup automatique joué")
+				m.g.AnalysisAsync(m.ctx, analysisDepth)
+			}
 		case "backspace":
 			if len(m.input) > 0 {
 				m.input = m.input[:len(m.input)-1]
@@ -244,19 +256,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			input := strings.TrimSpace(m.input)
 			m.input = ""
 			switch input {
-			case "q":
-				m.cancel()
-				return m, tea.Quit
-			case "a":
-				err := m.g.AutoPlay()
-				if err != nil {
-					m.message = errStyle.Render("autoplay: " + err.Error())
-				} else {
-					m.displayPos = m.g.Position
-					m.history = buildHistory(m.g.History)
-					m.message = okStyle.Render("coup automatique joué")
-					m.g.AnalysisAsync(m.ctx, analysisDepth)
-				}
 			case "":
 				// ignore empty input
 			default:
@@ -314,7 +313,7 @@ func (m model) View() tea.View {
 	if m.message != "" {
 		left.WriteString(m.message + "\n")
 	}
-	left.WriteString("\n" + infoStyle.Render("[entrer=jouer  a=autoplay  s=analyse  q=quitter]"))
+	left.WriteString("\n" + infoStyle.Render("[entrer=jouer  p=autoPlay  s=analyse  x=quitter]"))
 
 	// Colonne droite : historique
 	var right strings.Builder
