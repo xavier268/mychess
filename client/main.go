@@ -236,20 +236,31 @@ func renderBoard(pos position.Position) string {
 
 // ── Fin de partie ─────────────────────────────────────────────────────────────
 
+// hasLegalMove retourne true s'il existe au moins un coup légal dans la position courante.
+// GetMoveList retourne des coups pseudo-légaux ; on filtre l'illégalité exactement
+// comme AlphaBeta : un coup est illégal s'il laisse le roi du joueur en prise.
+func (m *model) hasLegalMove() bool {
+	p := m.g.Position
+	mover := p.Turn()
+	for _, mv := range p.GetMoveList() {
+		newPos, _ := p.DoMove(mv)
+		if !newPos.IsSquareAttacked(newPos.KingPosition(mover), 1^mover) {
+			return true
+		}
+	}
+	return false
+}
+
 // checkGameOver détecte mat et pat et retourne true si la partie est terminée.
 // Doit être appelé APRES chaque coup, avant de relancer l'analyse.
 func (m *model) checkGameOver() bool {
-	ml := m.g.Position.GetMoveList()
-	if len(ml) > 0 {
-		// il reste des coups légaux
+	if m.hasLegalMove() {
 		return m.checkRepeat3()
 	}
 	m.gameOver = true
 	if m.g.Position.IsCheck() {
 		winner := "Noirs"
-		if m.g.Position.Turn() == position.WHITE {
-			winner = "Noirs"
-		} else {
+		if m.g.Position.Turn() != position.WHITE {
 			winner = "Blancs"
 		}
 		m.message = errStyle.Render(fmt.Sprintf("ÉCHEC ET MAT — Les %s gagnent !", winner))
