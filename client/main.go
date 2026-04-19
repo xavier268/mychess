@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"mychess/game"
 	"mychess/position"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // analysisDepth est une borne haute intentionnellement grande : en pratique
@@ -60,15 +60,18 @@ func tick() tea.Cmd {
 // ── Modèle ────────────────────────────────────────────────────────────────────
 
 type model struct {
-	g       *game.Game
-	ctx     context.Context
-	cancel  context.CancelFunc
-	input   string
-	message string
-	msgOK   bool
-	mem     uint64
-	zSize   int
-	running bool
+	g   *game.Game
+	ctx context.Context
+
+	input     string
+	showStats bool // toggle avec 's' ; false = tick arrêté
+
+	// displayed messages
+	history string // history of moves played in the game, updated after each move
+	message string // feedback message for the user
+	stats   string // stats extracted from the game and updated every tick (500ms)
+
+	cancel context.CancelFunc // to stop everything when user wishes to quit
 
 	// displayPos est une copie stable de la position, mise à jour uniquement
 	// lorsqu'un coup est joué ou annulé — jamais lors du tick.
@@ -86,204 +89,7 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tick()
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tickMsg:
-		m.mem = availableMemoryBytes()
-		m.zSize = m.g.ZTableSize()
-		m.running = m.g.IsAnalysisRunning()
-		return m, tick()
-
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			m.cancel()
-			return m, tea.Quit
-		case tea.KeyEnter:
-			return m.handleInput()
-		case tea.KeyBackspace, tea.KeyDelete:
-			if len(m.input) > 0 {
-				m.input = m.input[:len(m.input)-1]
-			}
-		default:
-			if msg.Type == tea.KeyRunes {
-				m.input += string(msg.Runes)
-			}
-		}
-	}
-	return m, nil
-}
-
-func (m model) handleInput() (tea.Model, tea.Cmd) {
-	raw := strings.TrimSpace(strings.ToLower(m.input))
-	m.input = ""
-
-	switch raw {
-	case "q", "quit":
-		m.cancel()
-		return m, tea.Quit
-
-	case "a", "auto":
-		if err := m.g.AutoPlay(); err != nil {
-			m.message = err.Error()
-			m.msgOK = false
-		} else {
-			m.displayPos = m.g.Position
-			m.message = "AutoPlay : coup joué"
-			m.msgOK = true
-			m.g.AnalysisAsync(m.ctx, analysisDepth)
-		}
-
-	case "u", "undo":
-		if err := m.g.RetractPlay(); err != nil {
-			m.message = err.Error()
-			m.msgOK = false
-		} else {
-			m.displayPos = m.g.Position
-			m.message = "Coup annulé"
-			m.msgOK = true
-			m.g.AnalysisAsync(m.ctx, analysisDepth)
-		}
-
-	default:
-		mv, err := parseMove(raw, m.displayPos)
-		if err != nil {
-			m.message = err.Error()
-			m.msgOK = false
-		} else {
-			m.g.Play(mv)
-			m.displayPos = m.g.Position
-			m.message = fmt.Sprintf("Joué : %s→%s", mv.From, mv.To)
-			m.msgOK = true
-			m.g.AnalysisAsync(m.ctx, analysisDepth)
-		}
-	}
-	return m, nil
-}
-
-// ── Vue ───────────────────────────────────────────────────────────────────────
-
-func (m model) View() string {
-	var sb strings.Builder
-	sb.WriteString(renderBoard(m.displayPos))
-	sb.WriteString("\n")
-	sb.WriteString(renderInfo(m))
-	sb.WriteString("\n\n")
-	sb.WriteString(renderInput(m))
-	return sb.String()
-}
-
-func renderBoard(pos position.Position) string {
-	var sb strings.Builder
-
-	var header strings.Builder
-	header.WriteString("  ")
-	for f := range 8 {
-		fmt.Fprintf(&header, "  %c ", 'a'+f)
-	}
-	sb.WriteString(boldStyle.Render(header.String()) + "\n")
-
-	for r := 7; r >= 0; r-- {
-		sb.WriteString(boldStyle.Render(fmt.Sprintf("%d ", r+1)))
-		for f := 0; f < 8; f++ {
-			sq := position.Sq(r, f)
-			piece := pos.PieceAt(sq)
-			light := (r+f)%2 == 0
-
-			sym, ok := unicodePiece[piece]
-			if !ok {
-				sym = " "
-			}
-			cell := fmt.Sprintf(" %s  ", sym) // 4 chars wide for alignment
-
-			bg := darkSqBg
-			if light {
-				bg = lightSqBg
-			}
-			fg := blackFg
-			if piece > 0 {
-				fg = whiteFg
-			}
-
-			style := lipgloss.NewStyle().Background(bg).Foreground(fg)
-			sb.WriteString(style.Render(cell))
-		}
-		sb.WriteString(boldStyle.Render(fmt.Sprintf(" %d", r+1)) + "\n")
-	}
-
-	var footer strings.Builder
-	footer.WriteString("  ")
-	for f := range 8 {
-		fmt.Fprintf(&footer, "  %c ", 'a'+f)
-	}
-	sb.WriteString(boldStyle.Render(footer.String()) + "\n")
-
-	return sb.String()
-}
-
-func renderInfo(m model) string {
-	turn := "Blancs"
-	if m.displayPos.Turn() == position.BLACK {
-		turn = "Noirs"
-	}
-
-	scoreStr := "—"
-	if entry, ok := m.g.LastRootEntry(); ok {
-		switch {
-		case entry.Score >= 29000:
-			scoreStr = okStyle.Render("Mat annoncé !")
-		case entry.Score <= -29000:
-			scoreStr = errStyle.Render("Position perdue")
-		default:
-			pawn := float64(entry.Score) / 10.0
-			sign := "+"
-			if pawn < 0 {
-				sign = ""
-			}
-			scoreStr = fmt.Sprintf("%s%.1f p.", sign, pawn)
-		}
-	}
-
-	analysisStr := "⏸  arrêtée"
-	if m.running {
-		analysisStr = okStyle.Render("⚙  en cours")
-	}
-
-	memMB := float64(m.mem) / 1024 / 1024
-	memStr := fmt.Sprintf("%.0f Mo", memMB)
-
-	line1 := infoStyle.Render(fmt.Sprintf(
-		"Tour : %s   Score : %s   Analyse : %s",
-		boldStyle.Render(turn), scoreStr, analysisStr,
-	))
-	line2 := infoStyle.Render(fmt.Sprintf(
-		"Table Z : %d entrées   RAM dispo : %s",
-		m.zSize, memStr,
-	))
-
-	var sb strings.Builder
-	sb.WriteString(line1 + "\n")
-	sb.WriteString(line2)
-
-	if m.message != "" {
-		sb.WriteString("\n")
-		if m.msgOK {
-			sb.WriteString(okStyle.Render("✓ " + m.message))
-		} else {
-			sb.WriteString(errStyle.Render("✗ " + m.message))
-		}
-	}
-
-	return sb.String()
-}
-
-func renderInput(m model) string {
-	prompt := boldStyle.Render("Coup")
-	hint := lipgloss.NewStyle().Faint(true).Render("(ex: e2e4, e7e8q, auto, undo, q)")
-	return fmt.Sprintf("%s %s > %s█", prompt, hint, m.input)
+	return nil // showStats démarre à false, le tick est lancé uniquement sur demande
 }
 
 // ── Parsing de coup ───────────────────────────────────────────────────────────
@@ -336,12 +142,198 @@ func parseSq(s string) (position.Square, error) {
 	return position.Sq(int(s[1]-'1'), int(s[0]-'a')), nil
 }
 
+// ── Helpers d'affichage ───────────────────────────────────────────────────────
+
+// moveStr converts a Move to its string representation (e.g. "e2e4", "e7e8q", "e1g1").
+func moveStr(mv position.Move) string {
+	s := mv.From.String() + mv.To.String()
+	switch mv.Promotion {
+	case position.QUEEN:
+		s += "q"
+	case position.ROOK:
+		s += "r"
+	case position.BISHOP:
+		s += "b"
+	case position.KNIGHT:
+		s += "n"
+	}
+	return s
+}
+
+// buildHistory formats the game history as "1. e2e4 e7e5\n2. ..."
+func buildHistory(history []position.Move) string {
+	var sb strings.Builder
+	for i, mv := range history {
+		if i%2 == 0 {
+			fmt.Fprintf(&sb, "%d. ", i/2+1)
+		}
+		sb.WriteString(moveStr(mv))
+		if i%2 == 0 {
+			sb.WriteString(" ")
+		} else {
+			sb.WriteString("\n")
+		}
+	}
+	return sb.String()
+}
+
+// buildStats reads analysis results from the game engine (no lock needed — display only).
+func buildStats(g *game.Game) string {
+	entry := g.LastRootEntry
+	best := "–"
+	if entry.Best.From != entry.Best.To || entry.Best.Promotion != position.EMPTY {
+		best = moveStr(entry.Best)
+	}
+	return fmt.Sprintf("Profondeur: %d | Score: %+d | Meilleur: %s\n%s",
+		entry.Depth, entry.Score, best, g.Z.Stats())
+}
+
+// renderBoard draws the 8×8 board for the given position.
+func renderBoard(pos position.Position) string {
+	var sb strings.Builder
+	sb.WriteString("  a  b  c  d  e  f  g  h\n")
+	for rank := 7; rank >= 0; rank-- {
+		fmt.Fprintf(&sb, "%d", rank+1)
+		for file := 0; file < 8; file++ {
+			sq := position.Sq(rank, file)
+			piece := pos.PieceAt(sq)
+			sym := unicodePiece[piece]
+			isDark := (rank+file)%2 == 0
+			bg := lightSqBg
+			if isDark {
+				bg = darkSqBg
+			}
+			fg := whiteFg
+			if piece < 0 {
+				fg = blackFg
+			}
+			cell := lipgloss.NewStyle().Background(bg).Foreground(fg).Render(" " + sym + " ")
+			sb.WriteString(cell)
+		}
+		fmt.Fprintf(&sb, " %d\n", rank+1)
+	}
+	sb.WriteString("  a  b  c  d  e  f  g  h")
+	return sb.String()
+}
+
+// ── Update ────────────────────────────────────────────────────────────────────
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		switch msg.String() {
+		case "ctrl+c":
+			m.cancel()
+			return m, tea.Quit
+
+		case "s":
+			m.showStats = !m.showStats
+			if m.showStats {
+				m.stats = buildStats(m.g)
+				return m, tick() // démarre la boucle de tick
+			}
+			return m, nil // la boucle s'arrêtera au prochain tickMsg
+
+		case "backspace":
+			if len(m.input) > 0 {
+				m.input = m.input[:len(m.input)-1]
+			}
+
+		case "enter":
+			input := strings.TrimSpace(m.input)
+			m.input = ""
+			switch input {
+			case "q":
+				m.cancel()
+				return m, tea.Quit
+			case "a":
+				err := m.g.AutoPlay()
+				if err != nil {
+					m.message = errStyle.Render("autoplay: " + err.Error())
+				} else {
+					m.displayPos = m.g.Position
+					m.history = buildHistory(m.g.History)
+					m.message = okStyle.Render("coup automatique joué")
+					m.g.AnalysisAsync(m.ctx, analysisDepth)
+				}
+			case "":
+				// ignore empty input
+			default:
+				mv, err := parseMove(input, m.displayPos)
+				if err != nil {
+					m.message = errStyle.Render(err.Error())
+				} else {
+					m.g.Play(mv)
+					m.displayPos = m.g.Position
+					m.history = buildHistory(m.g.History)
+					m.message = okStyle.Render("joué : " + input)
+					m.g.AnalysisAsync(m.ctx, analysisDepth)
+				}
+			}
+
+		default:
+			if k := msg.Key(); k.Text != "" {
+				m.input += k.Text
+			}
+		}
+
+	case tickMsg:
+		if !m.showStats {
+			return m, nil // boucle arrêtée
+		}
+		m.stats = buildStats(m.g)
+		return m, tick()
+	}
+	return m, nil
+}
+
+// ── View ──────────────────────────────────────────────────────────────────────
+
+func (m model) View() tea.View {
+	turn := "Blancs"
+	if m.displayPos.Turn() == position.BLACK {
+		turn = "Noirs"
+	}
+
+	// Colonne gauche : trait + échiquier + analyse + saisie
+	var left strings.Builder
+	score := m.g.LastRootEntry.Score
+	left.WriteString(boldStyle.Render("Trait aux "+turn) + fmt.Sprintf("  (score : %+d)", score) + "\n\n")
+	left.WriteString(renderBoard(m.displayPos) + "\n\n")
+	if m.showStats {
+		left.WriteString(boldStyle.Render("Analyse :") + "\n")
+		if m.stats != "" {
+			left.WriteString(infoStyle.Render(m.stats) + "\n")
+		}
+		left.WriteString("\n")
+	}
+	left.WriteString(boldStyle.Render("Coup :") + " " + m.input + "_\n")
+	if m.message != "" {
+		left.WriteString(m.message + "\n")
+	}
+	left.WriteString("\n" + infoStyle.Render("[entrer=jouer  a=autoplay  s=analyse  q=quitter]"))
+
+	// Colonne droite : historique
+	var right strings.Builder
+	right.WriteString(boldStyle.Render("Historique :") + "\n\n")
+	if m.history != "" {
+		right.WriteString(m.history)
+	} else {
+		right.WriteString("–\n")
+	}
+
+	cols := lipgloss.JoinHorizontal(lipgloss.Top,
+		lipgloss.NewStyle().MarginRight(4).Render(left.String()),
+		right.String(),
+	)
+	return tea.NewView(cols)
+}
+
 // ── Point d'entrée ────────────────────────────────────────────────────────────
 
 func main() {
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		fmt.Printf("Erreur fatale : %v\n", err)
 	}
 }

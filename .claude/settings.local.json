@@ -7,7 +7,9 @@
       "Bash(go version:*)",
       "Bash(go get:*)",
       "Bash(grep -n \"WHITE\\\\|BLACK\\\\|GetTurn\\\\|Turn\\\\|GetKingPosition\" position/*.go)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Read(//c/Users/xavie/go/pkg/mod/charm.land/**)",
+      "Bash(go env *)"
     ]
   }
 }
