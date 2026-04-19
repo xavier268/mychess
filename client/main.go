@@ -66,6 +66,7 @@ type model struct {
 
 	input     string
 	showStats bool // toggle avec 's' ; false = tick arrêté
+	gameOver  bool // true quand la partie est terminée (mat ou pat)
 
 	// displayed messages
 	history string // history of moves played in the game, updated after each move
@@ -217,16 +218,45 @@ func renderBoard(pos position.Position) string {
 	return sb.String()
 }
 
+// ── Fin de partie ─────────────────────────────────────────────────────────────
+
+// checkGameOver détecte mat et pat et retourne true si la partie est terminée.
+// Doit être appelé après chaque coup, avant de relancer l'analyse.
+func (m *model) checkGameOver() bool {
+	if len(m.g.Position.GetMoveList()) > 0 {
+		return false
+	}
+	m.gameOver = true
+	if m.g.Position.IsCheck() {
+		winner := "Noirs"
+		if m.g.Position.Turn() == position.WHITE {
+			winner = "Noirs"
+		} else {
+			winner = "Blancs"
+		}
+		m.message = errStyle.Render(fmt.Sprintf("ÉCHEC ET MAT — Les %s gagnent !", winner))
+	} else {
+		m.message = boldStyle.Render("PAT — Partie nulle !")
+	}
+	return true
+}
+
 // ── Update ────────────────────────────────────────────────────────────────────
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "ctrl+c", "x":
 			m.cancel()
 			return m, tea.Quit
+		}
 
+		if m.gameOver {
+			return m, nil
+		}
+
+		switch msg.String() {
 		case "s":
 			m.showStats = !m.showStats
 			if m.showStats {
@@ -234,9 +264,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tick() // démarre la boucle de tick
 			}
 			return m, nil // la boucle s'arrêtera au prochain tickMsg
-		case "x":
-			m.cancel()
-			return m, tea.Quit
 		case "a":
 			err := m.g.AutoPlay()
 			if err != nil {
@@ -244,8 +271,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.displayPos = m.g.Position
 				m.history = buildHistory(m.g.History)
-				m.message = okStyle.Render("coup automatique joué")
-				m.g.AnalysisAsync(m.ctx, analysisDepth)
+				if !m.checkGameOver() {
+					m.message = okStyle.Render("coup automatique joué")
+					m.g.AnalysisAsync(m.ctx, analysisDepth)
+				} else {
+					m.cancel()
+				}
 			}
 		case "backspace":
 			if len(m.input) > 0 {
@@ -266,8 +297,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.g.Play(mv)
 					m.displayPos = m.g.Position
 					m.history = buildHistory(m.g.History)
-					m.message = okStyle.Render("joué : " + input)
-					m.g.AnalysisAsync(m.ctx, analysisDepth)
+					if !m.checkGameOver() {
+						m.message = okStyle.Render("joué : " + input)
+						m.g.AnalysisAsync(m.ctx, analysisDepth)
+					} else {
+						m.cancel()
+					}
 				}
 			}
 
@@ -299,7 +334,11 @@ func (m model) View() tea.View {
 	var left strings.Builder
 	score := m.g.LastRootEntry.Score
 	left.WriteString("\n" + mychess.COPYRIGHT + " V" + mychess.VERSION + "\n(build " + mychess.BUILDDATE + " - " + mychess.BUILDHASH + ")\n")
-	left.WriteString(boldStyle.Render("\nTrait aux "+turn) + fmt.Sprintf("  (score : %+d)", score) + "\n\n")
+	if m.gameOver {
+		left.WriteString(boldStyle.Render("\n══════ PARTIE TERMINÉE ══════") + "\n\n")
+	} else {
+		left.WriteString(boldStyle.Render("\nTrait aux "+turn) + fmt.Sprintf("  (score : %+d)", score) + "\n\n")
+	}
 
 	left.WriteString(renderBoard(m.displayPos) + "\n\n")
 	if m.showStats {
@@ -309,11 +348,17 @@ func (m model) View() tea.View {
 		}
 		left.WriteString("\n")
 	}
-	left.WriteString(boldStyle.Render("Coup :") + " " + m.input + "_\n")
+	if !m.gameOver {
+		left.WriteString(boldStyle.Render("Coup :") + " " + m.input + "_\n")
+	}
 	if m.message != "" {
 		left.WriteString(m.message + "\n")
 	}
-	left.WriteString("\n" + infoStyle.Render("[entrer=jouer  p=autoPlay  s=analyse  x=quitter]"))
+	if m.gameOver {
+		left.WriteString("\n" + infoStyle.Render("[x=quitter]"))
+	} else {
+		left.WriteString("\n" + infoStyle.Render("[entrer=jouer  a=autoPlay  s=analyse  x=quitter]"))
+	}
 
 	// Colonne droite : historique
 	var right strings.Builder

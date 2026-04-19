@@ -6,10 +6,10 @@ import (
 )
 
 // Size of ZEntry storage (nb of entries)
-const ZSize = 1_000_000
+const ZSize = 1_000_000 // conduit a occuper 87Mo en mémoire
 
 // DEBUG : reduced size for debugging
-// const ZSize = 1_000
+// const ZSize = 1_000 // mémoire volontairement contrainte pour tester la saturation de la table
 
 type ZMap struct {
 	// data storage
