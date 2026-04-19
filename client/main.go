@@ -27,20 +27,20 @@ var unicodePiece = map[position.Piece]string{
 	position.BISHOP:  "♗",
 	position.KNIGHT:  "♘",
 	position.PAWN:    "♙",
-	-position.KING:   "♚",
-	-position.QUEEN:  "♛",
-	-position.ROOK:   "♜",
-	-position.BISHOP: "♝",
-	-position.KNIGHT: "♞",
-	-position.PAWN:   "♟",
+	-position.KING:   "♔",
+	-position.QUEEN:  "♕",
+	-position.ROOK:   "♖",
+	-position.BISHOP: "♗",
+	-position.KNIGHT: "♘",
+	-position.PAWN:   "♙",
 	position.EMPTY:   " ",
 }
 
 var (
-	lightSqBg = lipgloss.Color("#F0D9B5")
-	darkSqBg  = lipgloss.Color("#B58863")
+	lightSqBg = lipgloss.Color("#4A90D9")
+	darkSqBg  = lipgloss.Color("#2E7D32")
 	whiteFg   = lipgloss.Color("#FFFFFF")
-	blackFg   = lipgloss.Color("#1A1A1A")
+	blackFg   = lipgloss.Color("#000000")
 
 	infoStyle = lipgloss.NewStyle().Padding(0, 1)
 	errStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#CC3333")).Bold(true)
@@ -163,14 +163,30 @@ func moveStr(mv position.Move) string {
 }
 
 // buildHistory formats the game history as "1. e2e4 e7e5\n2. ..."
-func buildHistory(history []position.Move) string {
+// Only the last maxLines lines are shown; a "…" prefix indicates truncation.
+func buildHistory(history []position.Move, maxLines int) string {
+	// Each line holds one move pair (white + optional black).
+	// Compute the first half-move index to display.
+	totalPairs := (len(history) + 1) / 2
+	firstPair := 0
+	truncated := false
+	if totalPairs > maxLines {
+		firstPair = totalPairs - maxLines
+		truncated = true
+	}
+	firstHalf := firstPair * 2
+
 	var sb strings.Builder
-	for i, mv := range history {
-		if i%2 == 0 {
-			fmt.Fprintf(&sb, "%d. ", i/2+1)
+	if truncated {
+		sb.WriteString("…\n")
+	}
+	for i, mv := range history[firstHalf:] {
+		idx := firstHalf + i
+		if idx%2 == 0 {
+			fmt.Fprintf(&sb, "%d. ", idx/2+1)
 		}
 		sb.WriteString(moveStr(mv))
-		if i%2 == 0 {
+		if idx%2 == 0 {
 			sb.WriteString(" ")
 		} else {
 			sb.WriteString("\n")
@@ -287,7 +303,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.message = errStyle.Render("autoplay: " + err.Error())
 			} else {
 				m.displayPos = m.g.Position
-				m.history = buildHistory(m.g.History)
+				m.history = buildHistory(m.g.History, 22)
 				if !m.checkGameOver() {
 					m.message = okStyle.Render("coup automatique joué")
 					m.g.AnalysisAsync(m.ctx, analysisDepth)
@@ -311,7 +327,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else {
 					m.g.Play(mv)
 					m.displayPos = m.g.Position
-					m.history = buildHistory(m.g.History)
+					m.history = buildHistory(m.g.History, 22)
 					if !m.checkGameOver() {
 						m.message = okStyle.Render("joué : " + input)
 						m.g.AnalysisAsync(m.ctx, analysisDepth)
