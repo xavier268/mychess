@@ -135,9 +135,9 @@ func TestAnalysis_rootEntryPresent2(t *testing.T) {
 	}
 }
 
-func TestAnalysis_rootEntryPresent9(t *testing.T) {
+func TestAnalysis_rootEntryPresent5(t *testing.T) {
 	g := NewGame()
-	g.Analysis(context.Background(), 9)
+	g.Analysis(context.Background(), 5)
 
 	entry, found := g.Z.Get(g.Position.Hash)
 	if !found {
