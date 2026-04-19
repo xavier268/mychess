@@ -335,7 +335,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tick() // démarre la boucle de tick
 			}
 			return m, nil // la boucle s'arrêtera au prochain tickMsg
-		case "a":
+		case "p":
 			if m.displayPos.Turn() == position.WHITE {
 				m.whiteTime += time.Since(m.turnStart)
 			} else {
@@ -435,7 +435,7 @@ func (m model) View() tea.View {
 	if m.gameOver {
 		left.WriteString("\n" + infoStyle.Render("[x=quitter]"))
 	} else {
-		left.WriteString("\n" + infoStyle.Render("[entrer=jouer  a=autoPlay  s=analyse  x=quitter]"))
+		left.WriteString("\n" + infoStyle.Render("[entrer=jouer  p=autoPlay  s=analyse  x=quitter]"))
 	}
 
 	// Colonne droite : chronomètre + historique
