@@ -131,6 +131,47 @@ func (p Position) PieceAt(sq Square) Piece {
 	panic("internal error")
 }
 
+// Validate checks that every bit set in colOcc has a matching piece-type entry.
+// Returns "" if the position is consistent, or a description of the first
+// corrupted square found. Intended for debugging only.
+func (p Position) Validate() string {
+	// Overlapping colOcc: two colours claiming the same square.
+	if overlap := p.colOcc[WHITE] & p.colOcc[BLACK]; overlap != 0 {
+		for sq := range overlap.AllSetSquares {
+			return fmt.Sprintf("sq %s: set in both colOcc[WHITE] and colOcc[BLACK]", sq)
+		}
+	}
+
+	all := p.colOcc[WHITE] | p.colOcc[BLACK]
+	for sq := range all.AllSetSquares {
+		color := Piece(p.colOcc[WHITE].Get(sq) - p.colOcc[BLACK].Get(sq))
+		if color == 0 {
+			continue // both bits set → EMPTY (caught above, but be safe)
+		}
+		if p.pawnOcc.Get(sq) == 1 {
+			continue
+		}
+		if p.knightOcc.Get(sq) == 1 {
+			continue
+		}
+		if p.rookOcc.Get(sq) == 1 || p.bishopOcc.Get(sq) == 1 {
+			continue // rook, bishop, or queen
+		}
+		if sq == p.status.GetKingPosition(WHITE) || sq == p.status.GetKingPosition(BLACK) {
+			continue
+		}
+		side := "WHITE"
+		if color < 0 {
+			side = "BLACK"
+		}
+		return fmt.Sprintf("sq %s (%s): set in colOcc but matches no piece type (kings at %s/%s)",
+			sq, side,
+			p.status.GetKingPosition(WHITE),
+			p.status.GetKingPosition(BLACK))
+	}
+	return ""
+}
+
 func (p Position) Dump() {
 	fmt.Println("White occ : ", p.colOcc[WHITE].String())
 	fmt.Println("Black occ : ", p.colOcc[BLACK].String())
@@ -141,4 +182,21 @@ func (p Position) Dump() {
 	fmt.Println("White king sq : ", Bitboard(1<<p.status.GetKingPosition(WHITE)).String())
 	fmt.Println("Black king sq : ", Bitboard(1<<p.status.GetKingPosition(BLACK)).String())
 	fmt.Printf("Status : %s\n", p.status.String())
+}
+
+// DebugString returns the same information as Dump but as a string.
+func (p Position) DebugString() string {
+	return fmt.Sprintf(
+		"White occ : %s\nBlack occ : %s\nPawn occ : %s\nKnight occ : %s\nBishop occ : %s\nRook occ : %s\nWhite king sq : %s\nBlack king sq : %s\nStatus : %s\n%s",
+		p.colOcc[WHITE].String(),
+		p.colOcc[BLACK].String(),
+		p.pawnOcc.String(),
+		p.knightOcc.String(),
+		p.bishopOcc.String(),
+		p.rookOcc.String(),
+		Bitboard(1<<p.status.GetKingPosition(WHITE)).String(),
+		Bitboard(1<<p.status.GetKingPosition(BLACK)).String(),
+		p.status.String(),
+		p.String(),
+	)
 }

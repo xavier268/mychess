@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"log"
 	"mychess/position"
 	"time"
 )
@@ -100,19 +101,27 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 	var bestMove position.Move
 
 	for _, move := range moves {
+		// DEBUG
+		if msg := g.Position.Validate(); msg != "" {
+			log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		}
+
 		g.Position, move = g.Position.DoMove(move)
+		// DEBUG
+		if msg := g.Position.Validate(); msg != "" {
+			log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		}
 
 		// Negamax : on appelle récursivement pour l'adversaire.
-		// La fenêtre est inversée et niée : [alpha, beta] → [-beta, -alpha].
-		// Le score retourné est du point de vue de l'adversaire, on le nie pour l'avoir du nôtre.
 		score := -g.AlphaBeta(ctx, -beta, -alpha, depth-1)
 
-		// IMPORTANT : UndoMove retourne la nouvelle position restaurée — il faut capturer le résultat.
-		// (Position est un type valeur en Go ; ignorer le retour laisserait g.Position inchangée.)
 		g.Position = g.Position.UndoMove(move)
+		// DEBUG
+		if msg := g.Position.Validate(); msg != "" {
+			log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		}
 
 		// Si le contexte a expiré pendant l'appel récursif, on remonte sans stocker.
-		// Le résultat partiel (certains coups explorés, d'autres non) ne doit pas polluer Z.
 		if ctx.Err() != nil {
 			return 0
 		}
