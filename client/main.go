@@ -65,7 +65,7 @@ type model struct {
 	ctx context.Context
 
 	input     string
-	showStats bool // toggle avec 's' ; false = tick arrêté
+	showStats bool // toggle avec 's'
 	gameOver  bool // true quand la partie est terminée (mat ou pat)
 
 	// displayed messages
@@ -80,18 +80,23 @@ type model struct {
 	// Cela évite que l'échiquier clignote pendant l'analyse (AlphaBeta
 	// modifie g.Position en continu via DoMove/UndoMove).
 	displayPos position.Position
+
+	// chronomètres
+	whiteTime time.Duration
+	blackTime time.Duration
+	turnStart time.Time // début du tour du joueur courant
 }
 
 func initialModel() model {
 	ctx, cancel := context.WithCancel(context.Background())
 	g := game.NewGame()
-	m := model{g: g, ctx: ctx, cancel: cancel, displayPos: g.Position}
+	m := model{g: g, ctx: ctx, cancel: cancel, displayPos: g.Position, turnStart: time.Now()}
 	g.AnalysisAsync(ctx, analysisDepth)
 	return m
 }
 
 func (m model) Init() tea.Cmd {
-	return nil // showStats démarre à false, le tick est lancé uniquement sur demande
+	return tick() // démarre le tick pour le chronomètre
 }
 
 // ── Parsing de coup ───────────────────────────────────────────────────────────
@@ -206,6 +211,28 @@ func buildStats(g *game.Game) string {
 		entry.Depth, entry.Score, best, g.Z.Stats())
 }
 
+func formatDuration(d time.Duration) string {
+	s := int(d.Seconds())
+	if h := s / 3600; h > 0 {
+		return fmt.Sprintf("%d:%02d:%02d", h, (s%3600)/60, s%60)
+	}
+	return fmt.Sprintf("%d:%02d", s/60, s%60)
+}
+
+// buildClock retourne le temps consommé par chaque joueur.
+// Le joueur dont c'est le tour voit son temps s'incrémenter en temps réel.
+func buildClock(m model) string {
+	white, black := m.whiteTime, m.blackTime
+	if !m.gameOver {
+		if m.displayPos.Turn() == position.WHITE {
+			white += time.Since(m.turnStart)
+		} else {
+			black += time.Since(m.turnStart)
+		}
+	}
+	return fmt.Sprintf("♔ Blancs : %s\n♚ Noirs  : %s", formatDuration(white), formatDuration(black))
+}
+
 // renderBoard draws the 8×8 board for the given position.
 func renderBoard(pos position.Position) string {
 	var sb strings.Builder
@@ -309,6 +336,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil // la boucle s'arrêtera au prochain tickMsg
 		case "a":
+			if m.displayPos.Turn() == position.WHITE {
+				m.whiteTime += time.Since(m.turnStart)
+			} else {
+				m.blackTime += time.Since(m.turnStart)
+			}
+			m.turnStart = time.Now()
 			err := m.g.AutoPlay()
 			if err != nil {
 				m.message = errStyle.Render("autoplay: " + err.Error())
@@ -336,6 +369,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err != nil {
 					m.message = errStyle.Render(err.Error())
 				} else {
+					if m.displayPos.Turn() == position.WHITE {
+						m.whiteTime += time.Since(m.turnStart)
+					} else {
+						m.blackTime += time.Since(m.turnStart)
+					}
+					m.turnStart = time.Now()
 					m.g.Play(mv)
 					m.displayPos = m.g.Position
 					m.history = buildHistory(m.g.History, 22)
@@ -353,10 +392,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tickMsg:
-		if !m.showStats {
-			return m, nil // boucle arrêtée
+		if m.showStats {
+			m.stats = buildStats(m.g)
 		}
-		m.stats = buildStats(m.g)
 		return m, tick()
 	}
 	return m, nil
@@ -400,9 +438,11 @@ func (m model) View() tea.View {
 		left.WriteString("\n" + infoStyle.Render("[entrer=jouer  a=autoPlay  s=analyse  x=quitter]"))
 	}
 
-	// Colonne droite : historique
+	// Colonne droite : chronomètre + historique
 	var right strings.Builder
-	right.WriteString(boldStyle.Render("\n\n\n\nHistorique :") + "\n\n")
+	right.WriteString("\n")
+	right.WriteString(buildClock(m) + "\n\n")
+	right.WriteString(boldStyle.Render("Historique :") + "\n\n")
 	if m.history != "" {
 		right.WriteString(m.history)
 	} else {
