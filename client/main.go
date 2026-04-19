@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"mychess"
 	"strings"
 	"time"
 
@@ -298,7 +299,9 @@ func (m model) View() tea.View {
 	// Colonne gauche : trait + échiquier + analyse + saisie
 	var left strings.Builder
 	score := m.g.LastRootEntry.Score
-	left.WriteString(boldStyle.Render("Trait aux "+turn) + fmt.Sprintf("  (score : %+d)", score) + "\n\n")
+	left.WriteString("\n" + mychess.COPYRIGHT + " V" + mychess.VERSION + "\n(build " + mychess.BUILDDATE + " - " + mychess.BUILDHASH + ")\n")
+	left.WriteString(boldStyle.Render("\nTrait aux "+turn) + fmt.Sprintf("  (score : %+d)", score) + "\n\n")
+
 	left.WriteString(renderBoard(m.displayPos) + "\n\n")
 	if m.showStats {
 		left.WriteString(boldStyle.Render("Analyse :") + "\n")
@@ -315,7 +318,7 @@ func (m model) View() tea.View {
 
 	// Colonne droite : historique
 	var right strings.Builder
-	right.WriteString(boldStyle.Render("Historique :") + "\n\n")
+	right.WriteString(boldStyle.Render("\n\n\n\nHistorique :") + "\n\n")
 	if m.history != "" {
 		right.WriteString(m.history)
 	} else {

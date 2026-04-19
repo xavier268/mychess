@@ -1,0 +1,52 @@
+version: '3'
+
+
+env:
+  GOOS: # windows or linux ?
+    sh: go env GOOS
+  VERSION: # program version
+    sh: go run ./version
+  EXE: # executable extension (.exe or nothing)
+    sh: 'if [ "$(go env GOOS)" = "windows" ]; then echo ".exe"; else echo ""; fi'
+  BROWSER: # browser to open  page
+    sh: 'if [ "$(go env GOOS)" = "windows" ]; then echo "Powershell Start-Process "; else echo "xdg-open"; fi'
+  DATE: # date string
+    sh: 'if [ "$(go env GOOS)" = "windows" ]; then echo "$(Powershell Get-Date -Format s)"; else echo "$(date -Iseconds)"; fi'
+  
+
+
+tasks:
+
+  default:
+    desc: default task will display task menu (and update task itself)
+    cmds:
+      - go install github.com/go-task/task/v3/cmd/task@latest
+      - echo "default task will display task menu"
+      - task --list-all
+
+
+  godoc: 
+    desc: launch godoc viewer and open browser page on windows
+    cmds:     
+      - go install golang.org/x/tools/cmd/godoc@latest
+      - $( {{.BROWSER }} "http://localhost:6060" )
+      - godoc -http=:6060   
+
+  build:
+    desc: build executable for current architecture (windows or linux)
+    cmds:
+      - echo Saving built executable in ./bin/mychess-{{.VERSION}}{{.EXE}}
+      - go build -o ./bin/mychess-{{.VERSION}}{{.EXE}} -ldflags "-X 'mychess.BUILDDATE={{.DATE}}' -X 'mychess.BUILDHASH=$(git rev-parse HEAD)'" ./client/...
+
+  version:
+    desc: display versionning information
+    cmds:
+      - task --version
+      - echo myCDesk version':' {{.VERSION}}
+      - echo "shell :" $0 $SHELL
+      - go version
+
+  test:
+    desc: run all tests
+    cmds:
+      - go test -v -count=1 ./...
