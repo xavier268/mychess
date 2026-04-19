@@ -8,6 +8,9 @@ import (
 // Size of ZEntry storage (nb of entries)
 const ZSize = 1_000_000
 
+// DEBUG : reduced size for debugging
+// const ZSize = 1_000
+
 type ZMap struct {
 	// data storage
 	data [ZSize]ZEntry
@@ -84,6 +87,7 @@ func (z *ZMap) Get(h uint64) (ze ZEntry, found bool) {
 func (z *ZMap) Set(h uint64, ze ZEntry) (updated bool) {
 	// Compute index in the array
 	i := h % ZSize
+	ze.ConfirmH = ConfirmH(h)
 	e := z.data[i]
 
 	// If cell is free, just set it,

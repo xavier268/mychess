@@ -28,6 +28,12 @@ type Game struct {
 	// Nil si aucune analyse n'a jamais été lancée.
 	// Appeler cancel plusieurs fois est un no-op (garanti par le package context).
 	cancelAnalysis context.CancelFunc
+
+	// LastRootEntry est l'entrée de la position racine issue de la dernière
+	// profondeur entièrement terminée. Elle est mise à jour dans Analysis après
+	// chaque profondeur complète, et sert de source fiable pour AutoPlay même
+	// quand Z a écrasé l'entrée racine (table saturée).
+	LastRootEntry ZEntry
 }
 
 func NewGame() *Game {
@@ -92,6 +98,7 @@ func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
 		ctx = context.Background()
 	}
 
+	rootHash := g.Position.Hash
 	for d := uint16(1); d <= maxDepth; d++ {
 		// Fenêtre initiale maximale [LOST, WON] : recherche complète sans aspiration.
 		g.AlphaBeta(ctx, position.LOST, position.WON, d)
@@ -102,7 +109,11 @@ func (g *Game) Analysis(ctx context.Context, maxDepth uint16) (depth uint16) {
 			return depth
 		}
 
-		// Niveau d terminé avec succès : on le mémorise comme dernier niveau complet.
+		// Niveau d terminé avec succès : épingle l'entrée racine avant qu'elle
+		// soit éventuellement écrasée par la suite de la recherche.
+		if entry, found := g.Z.Get(rootHash); found {
+			g.LastRootEntry = entry
+		}
 		depth = d
 	}
 	return depth // maxDepth atteinte sans interruption
@@ -162,8 +173,10 @@ func (g *Game) AutoPlay() error {
 	}
 
 	entry, found := g.Z.Get(g.Position.Hash)
-
 	if !found || !moveIsValid(entry.Best) {
+		entry = g.LastRootEntry
+	}
+	if !moveIsValid(entry.Best) {
 		return errors.New("aucun coup disponible : lancez une analyse avant d'appeler AutoPlay")
 	}
 

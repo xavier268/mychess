@@ -6,7 +6,8 @@
       "Bash(go vet:*)",
       "Bash(go version:*)",
       "Bash(go get:*)",
-      "Bash(grep -n \"WHITE\\\\|BLACK\\\\|GetTurn\\\\|Turn\\\\|GetKingPosition\" position/*.go)"
+      "Bash(grep -n \"WHITE\\\\|BLACK\\\\|GetTurn\\\\|Turn\\\\|GetKingPosition\" position/*.go)",
+      "Bash(xargs grep *)"
     ]
   }
 }

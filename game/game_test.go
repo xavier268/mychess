@@ -10,7 +10,9 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"mychess/position"
 )
@@ -210,5 +212,32 @@ func TestAnalysis_bestMoveLeadsToCheck(t *testing.T) {
 	newPos, _ := g.Position.DoMove(entry.Best)
 	if !newPos.IsCheck() {
 		t.Errorf("le meilleur coup (%v) devrait mettre le Roi adverse en échec", entry.Best)
+	}
+}
+
+// ── AutoPlay 30 coups ─────────────────────────────────────────────────────────
+
+func TestAutoPlay_30moves(t *testing.T) {
+	g := NewGame()
+
+	fmt.Println("\nPosition initiale :")
+	fmt.Println(g.Position.String())
+
+	for i := range 30 {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		g.Z.ResetStats()
+		depth := g.Analysis(ctx, 20)
+		cancel()
+
+		entry, _ := g.Z.Get(g.Position.Hash)
+		fmt.Printf("\n=== Coup %d — profondeur %d — meilleur: %v — score: %d ===\n",
+			i+1, depth, entry.Best, entry.Score)
+		fmt.Println(g.Z.Stats())
+
+		if err := g.AutoPlay(); err != nil {
+			fmt.Printf("Partie terminée : %v\n", err)
+			break
+		}
+		fmt.Println(g.Position.String())
 	}
 }
