@@ -2,9 +2,7 @@ package game
 
 import (
 	"context"
-	"log"
 	"mychess/position"
-	"time"
 )
 
 // AlphaBeta implémente l'algorithme Negamax avec élagage alpha-bêta et table de transposition.
@@ -39,7 +37,7 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 	// ── 1. CONSULTATION DE LA TABLE DE TRANSPOSITION ──────────────────────────
 	// Si cette position a déjà été analysée à une profondeur suffisante,
 	// on peut réutiliser ou affiner le résultat sans refaire la recherche complète.
-	entry, found := g.Z[hash]
+	entry, found := g.Z.Get(hash)
 	if found && entry.Depth >= depth {
 		switch entry.ScoreType {
 		case EXACT:
@@ -103,13 +101,13 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 	for _, move := range moves {
 		// DEBUG
 		if msg := g.Position.Validate(); msg != "" {
-			log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+			g.Log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
 		}
 
 		g.Position, move = g.Position.DoMove(move)
 		// DEBUG
 		if msg := g.Position.Validate(); msg != "" {
-			log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+			g.Log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
 		}
 
 		// Negamax : on appelle récursivement pour l'adversaire.
@@ -118,7 +116,7 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 		g.Position = g.Position.UndoMove(move)
 		// DEBUG
 		if msg := g.Position.Validate(); msg != "" {
-			log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+			g.Log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
 		}
 
 		// Si le contexte a expiré pendant l'appel récursif, on remonte sans stocker.
@@ -149,7 +147,7 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 		Score: bestScore,
 		Best:  bestMove,
 		Depth: depth,
-		Age:   time.Now().UnixNano(),
+		Age:   uint16(len(g.History)),
 	}
 	if bestScore <= oldAlpha {
 		newEntry.ScoreType = UPPER
@@ -159,21 +157,9 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 		newEntry.ScoreType = EXACT
 	}
 
-	// On n'écrase une entrée existante que si la nouvelle est au moins aussi profonde.
-	// Remplacer une analyse à profondeur 5 par une à profondeur 2 ferait perdre du travail.
-	//
-	// Plafond strict : si la table est pleine, on ne crée PAS de nouvelles entrées.
-	// On peut toujours mettre à jour une entrée existante (len(Z) reste constant).
-	// Cela évite que Z croisse de façon explosive en milieu de profondeur avant
-	// que pruneZLocked ne soit appelé en fin de niveau.
-	existing, ok := g.Z[hash]
-	if ok && newEntry.Depth >= existing.Depth {
-		g.Z[hash] = newEntry
-		g.zSize.Store(int64(len(g.Z)))
-	} else if !ok && len(g.Z) < maxZEntries {
-		g.Z[hash] = newEntry
-		g.zSize.Store(int64(len(g.Z)))
-	}
+	// On n'écrase une entrée existante que si on peut stocker et que cela améliore notre connaissance.
+	// La logique est dans ZMap.Set()
+	_ = g.Z.Set(hash, newEntry)
 
 	return bestScore
 }

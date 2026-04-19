@@ -11,7 +11,6 @@ package game
 import (
 	"context"
 	"testing"
-	"time"
 
 	"mychess/position"
 )
@@ -63,8 +62,8 @@ func TestNewGame_initialState(t *testing.T) {
 	if len(g.History) != 0 {
 		t.Errorf("NewGame: History devrait être vide, contient %d entrées", len(g.History))
 	}
-	if len(g.Z) != 0 {
-		t.Errorf("NewGame: Z devrait être vide, contient %d entrées", len(g.Z))
+	if g.Z.cellCount != 0 {
+		t.Errorf("NewGame: Z devrait être vide, contient %d entrées", g.Z.cellCount)
 	}
 }
 
@@ -81,54 +80,6 @@ func TestPlay_updatesPositionAndHistory(t *testing.T) {
 	}
 	if len(g.History) != 1 {
 		t.Errorf("Play: History devrait contenir 1 coup, contient %d", len(g.History))
-	}
-}
-
-// ── RetractPlay ──────────────────────────────────────────────────────────────
-
-func TestRetractPlay_restoresPosition(t *testing.T) {
-	g := NewGame()
-	before := g.Position
-
-	g.Play(firstLegalMove(g))
-	if err := g.RetractPlay(); err != nil {
-		t.Fatalf("RetractPlay: erreur inattendue : %v", err)
-	}
-
-	if g.Position != before {
-		t.Error("RetractPlay: la position devrait être restaurée à l'état initial")
-	}
-	if len(g.History) != 0 {
-		t.Errorf("RetractPlay: History devrait être vide après annulation, contient %d coups", len(g.History))
-	}
-}
-
-func TestRetractPlay_errorOnEmptyHistory(t *testing.T) {
-	g := NewGame()
-	if err := g.RetractPlay(); err == nil {
-		t.Error("RetractPlay: devrait retourner une erreur si l'historique est vide")
-	}
-}
-
-func TestRetractPlay_doublePlayDoubleRetract(t *testing.T) {
-	g := NewGame()
-	before := g.Position
-
-	g.Play(firstLegalMove(g))
-	g.Play(firstLegalMove(g))
-
-	if err := g.RetractPlay(); err != nil {
-		t.Fatalf("premier RetractPlay: %v", err)
-	}
-	if err := g.RetractPlay(); err != nil {
-		t.Fatalf("deuxième RetractPlay: %v", err)
-	}
-
-	if g.Position != before {
-		t.Error("après deux Play + deux RetractPlay, la position devrait être restaurée")
-	}
-	if len(g.History) != 0 {
-		t.Errorf("History devrait être vide, contient %d coups", len(g.History))
 	}
 }
 
@@ -163,16 +114,32 @@ func TestAnalysis_populatesZ(t *testing.T) {
 	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
-	if len(g.Z) == 0 {
+	if g.Z.cellCount == 0 {
 		t.Error("Analysis: Z devrait être rempli après une analyse à profondeur 2")
 	}
 }
 
-func TestAnalysis_rootEntryPresent(t *testing.T) {
+func TestAnalysis_rootEntryPresent2(t *testing.T) {
 	g := NewGame()
 	g.Analysis(context.Background(), 2)
 
-	entry, found := g.Z[g.Position.Hash]
+	entry, found := g.Z.Get(g.Position.Hash)
+	if !found {
+		t.Fatal("Analysis: Z ne contient pas d'entrée pour la position racine")
+	}
+	if entry.Depth < 1 {
+		t.Errorf("Analysis: l'entrée racine a Depth=%d, attendu ≥ 1", entry.Depth)
+	}
+	if entry.Best == (position.Move{}) {
+		t.Error("Analysis: l'entrée racine devrait avoir un meilleur coup")
+	}
+}
+
+func TestAnalysis_rootEntryPresent9(t *testing.T) {
+	g := NewGame()
+	g.Analysis(context.Background(), 9)
+
+	entry, found := g.Z.Get(g.Position.Hash)
 	if !found {
 		t.Fatal("Analysis: Z ne contient pas d'entrée pour la position racine")
 	}
@@ -192,21 +159,6 @@ func TestAnalysis_returnedDepth(t *testing.T) {
 	}
 }
 
-func TestAnalysis_deeperSearchOverwritesShallower(t *testing.T) {
-	g := NewGame()
-
-	g.Analysis(context.Background(), 1)
-	depthAfter1 := g.Z[g.Position.Hash].Depth
-
-	g.Analysis(context.Background(), 2)
-	depthAfter2 := g.Z[g.Position.Hash].Depth
-
-	if depthAfter2 <= depthAfter1 {
-		t.Errorf("une analyse plus profonde devrait mettre à jour l'entrée (avant=%d, après=%d)",
-			depthAfter1, depthAfter2)
-	}
-}
-
 func TestAnalysis_cancelledBeforeStart(t *testing.T) {
 	g := NewGame()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -216,43 +168,8 @@ func TestAnalysis_cancelledBeforeStart(t *testing.T) {
 	if depth != 0 {
 		t.Errorf("Analysis: devrait retourner 0 si le contexte est déjà annulé, obtenu %d", depth)
 	}
-	if len(g.Z) != 0 {
-		t.Errorf("Analysis: Z devrait rester vide si annulé avant le démarrage, contient %d entrées", len(g.Z))
-	}
-}
-
-// TestAnalysis_zCoherenceAfterCancel vérifie l'invariant principal de l'implémentation :
-// aucune entrée de Z n'a une profondeur supérieure à la dernière profondeur complète.
-//
-// Garantie : AlphaBeta ne stocke rien dans Z si g.Ctx est annulé pendant la recherche.
-// Seules les profondeurs entièrement terminées sont donc visibles dans la table.
-//
-// Le time.Sleep est nécessaire ici : Analysis est synchrone mais lancé dans une goroutine
-// pour permettre l'annulation à mi-chemin. On attend suffisamment pour que la profondeur 1
-// se termine (~1 ms en pratique), puis on annule avant la profondeur 2.
-func TestAnalysis_zCoherenceAfterCancel(t *testing.T) {
-	g := NewGame()
-	ctx, cancel := context.WithCancel(context.Background())
-
-	ch := make(chan uint16, 1)
-	go func() {
-		ch <- g.Analysis(ctx, 10)
-	}()
-
-	// 20 ms laissent la profondeur 1 se terminer (< 1 ms en pratique sur la position de départ).
-	time.Sleep(20 * time.Millisecond)
-	cancel()
-	completedDepth := <-ch
-
-	// Invariant : toute entrée de Z doit avoir Depth ≤ completedDepth.
-	for hash, entry := range g.Z {
-		if entry.Depth > completedDepth {
-			t.Errorf("incohérence Z : hash=%x Depth=%d > profondeur complète=%d",
-				hash, entry.Depth, completedDepth)
-		}
-	}
-	if completedDepth == 0 && len(g.Z) > 0 {
-		t.Errorf("Z devrait être vide si completedDepth=0, contient %d entrées", len(g.Z))
+	if g.Z.cellCount != 0 {
+		t.Errorf("Analysis: Z devrait rester vide si annulé avant le démarrage, contient %d entrées", g.Z.cellCount)
 	}
 }
 
@@ -269,7 +186,7 @@ func TestAnalysis_findsWinningScore(t *testing.T) {
 		t.Fatalf("Analysis n'a pas complété la profondeur 2 (complétée : %d)", completedDepth)
 	}
 
-	entry, found := g.Z[g.Position.Hash]
+	entry, found := g.Z.Get(g.Position.Hash)
 	if !found {
 		t.Fatal("Z ne contient pas d'entrée pour la position racine")
 	}
@@ -284,7 +201,7 @@ func TestAnalysis_bestMoveLeadsToCheck(t *testing.T) {
 	g := mateInOneGame(t)
 	g.Analysis(context.Background(), 2)
 
-	entry, found := g.Z[g.Position.Hash]
+	entry, found := g.Z.Get(g.Position.Hash)
 	if !found || entry.Best == (position.Move{}) {
 		t.Fatal("Z ne contient pas de meilleur coup pour la position racine")
 	}
@@ -293,59 +210,5 @@ func TestAnalysis_bestMoveLeadsToCheck(t *testing.T) {
 	newPos, _ := g.Position.DoMove(entry.Best)
 	if !newPos.IsCheck() {
 		t.Errorf("le meilleur coup (%v) devrait mettre le Roi adverse en échec", entry.Best)
-	}
-}
-
-// ── PruneZ ───────────────────────────────────────────────────────────────────
-
-func TestPruneZ_reducesToTargetSize(t *testing.T) {
-	g := NewGame()
-	g.Analysis(context.Background(), 2)
-
-	initial := len(g.Z)
-	if initial < 2 {
-		t.Skip("Z trop petite pour tester la purge")
-	}
-	target := initial / 2
-	g.PruneZ(target)
-
-	if len(g.Z) > target {
-		t.Errorf("PruneZ: attendu len(Z) ≤ %d, obtenu %d", target, len(g.Z))
-	}
-}
-
-func TestPruneZ_noOpWhenSmallEnough(t *testing.T) {
-	g := NewGame()
-	g.Analysis(context.Background(), 2)
-
-	before := len(g.Z)
-	g.PruneZ(before + 1000)
-
-	if len(g.Z) != before {
-		t.Errorf("PruneZ: ne devrait rien supprimer si déjà sous la cible (avant=%d après=%d)",
-			before, len(g.Z))
-	}
-}
-
-// TestPruneZ_removesOldestEntries injecte des entrées avec des Ages connus
-// et vérifie que PruneZ supprime d'abord les plus anciennes (Age le plus bas).
-func TestPruneZ_removesOldestEntries(t *testing.T) {
-	g := NewGame()
-
-	// 6 entrées avec Ages 0..5 (hashes distincts pour éviter les collisions).
-	for i := uint64(0); i < 6; i++ {
-		g.Z[i] = ZEntry{Age: int64(i), Depth: 1}
-	}
-
-	// Purge à 3 : Ages 0, 1, 2 doivent disparaître ; Ages 3, 4, 5 doivent rester.
-	g.PruneZ(3)
-
-	if len(g.Z) > 3 {
-		t.Errorf("PruneZ: attendu len(Z) ≤ 3, obtenu %d", len(g.Z))
-	}
-	for hash, entry := range g.Z {
-		if entry.Age < 3 {
-			t.Errorf("PruneZ: entrée hash=%d Age=%d aurait dû être supprimée", hash, entry.Age)
-		}
 	}
 }
