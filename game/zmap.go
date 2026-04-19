@@ -5,10 +5,6 @@ import (
 	"mychess/position"
 )
 
-// Size of ZEntry storage (nb of entries)
-// const ZSize = 1_000_000 // conduit a occuper ~90Mo en mémoire
-const ZSize = 10_000_000 // conduit a occuper ~1.3Go en mémoire
-
 // DEBUG : reduced size for debugging
 // const ZSize = 1_000 // mémoire volontairement contrainte pour tester la saturation de la table
 
