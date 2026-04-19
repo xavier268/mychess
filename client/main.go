@@ -221,10 +221,12 @@ func renderBoard(pos position.Position) string {
 // ── Fin de partie ─────────────────────────────────────────────────────────────
 
 // checkGameOver détecte mat et pat et retourne true si la partie est terminée.
-// Doit être appelé après chaque coup, avant de relancer l'analyse.
+// Doit être appelé APRES chaque coup, avant de relancer l'analyse.
 func (m *model) checkGameOver() bool {
-	if len(m.g.Position.GetMoveList()) > 0 {
-		return false
+	ml := m.g.Position.GetMoveList()
+	if len(ml) > 0 {
+		// il reste des coups légaux
+		return m.checkRepeat3()
 	}
 	m.gameOver = true
 	if m.g.Position.IsCheck() {
@@ -239,6 +241,21 @@ func (m *model) checkGameOver() bool {
 		m.message = boldStyle.Render("PAT — Partie nulle !")
 	}
 	return true
+}
+
+// Verifie si dans la liste des coups historiques, on a répété 3 fois la même position
+func (m *model) checkRepeat3() bool {
+	pm := make(map[uint64]int, len(m.g.History)+1)
+	for _, move := range m.g.History {
+		pos := move.PrevHash
+		pm[pos]++
+		if pm[pos] >= 3 {
+			m.gameOver = true
+			m.message = boldStyle.Render("PAT par 3 répétition de positions identiques — Partie nulle !")
+			return true
+		}
+	}
+	return false
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -274,8 +291,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if !m.checkGameOver() {
 					m.message = okStyle.Render("coup automatique joué")
 					m.g.AnalysisAsync(m.ctx, analysisDepth)
-				} else {
-					m.cancel()
 				}
 			}
 		case "backspace":
@@ -300,8 +315,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if !m.checkGameOver() {
 						m.message = okStyle.Render("joué : " + input)
 						m.g.AnalysisAsync(m.ctx, analysisDepth)
-					} else {
-						m.cancel()
 					}
 				}
 			}
