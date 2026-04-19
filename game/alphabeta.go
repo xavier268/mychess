@@ -101,16 +101,16 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 
 	for _, move := range moves {
 		// DEBUG
-		if msg := g.Position.Validate(); msg != "" {
-			g.Log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		}
+		// if msg := g.Position.Validate(); msg != "" {
+		// 	g.Log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		// }
 
 		mover := g.Position.Turn()
 		g.Position, move = g.Position.DoMove(move)
 		// DEBUG
-		if msg := g.Position.Validate(); msg != "" {
-			g.Log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		}
+		// if msg := g.Position.Validate(); msg != "" {
+		// 	g.Log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		// }
 
 		// Filtre de légalité : un coup qui laisse son propre roi en prise est illégal.
 		// On utilise GetMoveList en pseudo-légal (pour éviter de filtrer pendant la
@@ -120,9 +120,9 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 		if g.Position.IsSquareAttacked(g.Position.KingPosition(mover), 1^mover) {
 			g.Position = g.Position.UndoMove(move)
 			// DEBUG
-			if msg := g.Position.Validate(); msg != "" {
-				g.Log.Fatalf("CORRUPTION after UndoMove(%s) [illegal] at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-			}
+			// if msg := g.Position.Validate(); msg != "" {
+			// 	g.Log.Fatalf("CORRUPTION after UndoMove(%s) [illegal] at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+			// }
 			continue
 		}
 		legalMoves++
@@ -132,9 +132,9 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 
 		g.Position = g.Position.UndoMove(move)
 		// DEBUG
-		if msg := g.Position.Validate(); msg != "" {
-			g.Log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		}
+		// if msg := g.Position.Validate(); msg != "" {
+		// 	g.Log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
+		// }
 
 		// Si le contexte a expiré pendant l'appel récursif, on remonte sans stocker.
 		if ctx.Err() != nil {
