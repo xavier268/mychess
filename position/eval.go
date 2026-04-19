@@ -49,6 +49,11 @@ func (p Position) Turn() uint8 {
 	return p.status.GetTurn()
 }
 
+// KingPosition retourne la case du roi du camp `side` (WHITE ou BLACK).
+func (p Position) KingPosition(side uint8) Square {
+	return p.status.GetKingPosition(side)
+}
+
 // Value évalue la position de manière statique (appelée à profondeur 0 dans l'alpha/beta).
 // Retourne le score du point de vue du joueur courant : positif = bon pour lui.
 //
