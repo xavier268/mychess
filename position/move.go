@@ -19,7 +19,7 @@ const CASTLEMOVE Piece = KING + ROOK
 type Move struct {
 	From, To  Square
 	Promotion Piece // EMPTY / CASTLEMOVE / promotion piece type (always positive)
-	Score     uint8
+	Score     uint8 // Il ne s'agit pas du score de la position, mais d'un score grossier pour prioriser l'examen des killer moves.
 
 	// ── undo fields (populated by DoMove) ──────────────────────────────────
 	Captured      Piece  // captured piece with colour: +white, -black, EMPTY=none
