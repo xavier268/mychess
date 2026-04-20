@@ -1,4 +1,4 @@
-// Game (high-level) librairy. Includes analysis and scoring.
+// High-level library for analysis and scoring.
 package game
 
 import (

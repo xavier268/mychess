@@ -1,4 +1,4 @@
-// Low-level package, defines how pieces move around, and what are possible moves.
+// Low-level library for board state representation and legal moves generation.
 package position
 
 import (
