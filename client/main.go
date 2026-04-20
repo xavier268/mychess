@@ -350,6 +350,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.history = buildHistory(m.g.History, 22)
 				if !m.checkGameOver() {
 					m.message = okStyle.Render("coup automatique joué")
+					m.g.Z.ResetStats()
 					m.g.AnalysisAsync(m.ctx, analysisDepth)
 				}
 			}
@@ -380,6 +381,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.history = buildHistory(m.g.History, 22)
 					if !m.checkGameOver() {
 						m.message = okStyle.Render("joué : " + input)
+						m.g.Z.ResetStats()
 						m.g.AnalysisAsync(m.ctx, analysisDepth)
 					}
 				}
