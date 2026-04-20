@@ -1,3 +1,5 @@
+// A home-made chess program constructed for educationnal and testing purposes.
+// However, playing level is already quite interesting ...
 package mychess
 
 const VERSION = "0.3.6"
