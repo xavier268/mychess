@@ -1,4 +1,4 @@
-//go:build high
+//go:build ultra
 
 package game
 
@@ -7,4 +7,4 @@ package game
 // high		50M d'entrées		4Go
 // default	5M d'entrées		400Mo
 // low		1M d'entrées		90Mo
-const ZSize = 50_000_000
+const ZSize = 500_000_000
