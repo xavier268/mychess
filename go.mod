@@ -1,4 +1,4 @@
-module mychess
+module github.com/xavier268/mychess
 
 go 1.26.0
 
