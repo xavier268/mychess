@@ -1,3 +1,4 @@
+// Low-level package, defines how pieces move around, and what are possible moves.
 package position
 
 import (

@@ -1,3 +1,4 @@
+// A text-base client to play chess
 package main
 
 import (

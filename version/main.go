@@ -1,4 +1,4 @@
-// retrieve version number
+// Retrieve version number. Use for build tasks.
 package main
 
 import (
