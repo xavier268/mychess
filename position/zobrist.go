@@ -36,6 +36,9 @@ var DefaultZT = func() ZobristTable {
 func (z *ZobristTable) Init() {
 
 	// Generate enough "good" random numbers
+	// L'utilisation de crypto/rand de meilleure qualité que math/rand/v2,
+	// mais pas seedable et un peu plus lent.
+	// Pas critique ici, car seulement appélé une fois à l'init.
 	const size = 6*64*8 + 2*64*8 + 2*4*8 + 8 // ZobristTurn is uint64 (8 bytes)
 	rands := make([]byte, size)
 	byteIndex := 0
