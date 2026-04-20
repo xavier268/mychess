@@ -29,10 +29,10 @@ func (z *ZMap) ResetStats() {
 
 // Display stats about hit/miss ratio
 func (z *ZMap) Stats() string {
-	return fmt.Sprintf("Cells %d/%d(%2.1f%%)\nGet h:%d m:%d h/m %.3f\nSet h:%d m:%d h/m %.3f",
+	return fmt.Sprintf("Cells %d/%d(%2.1f%%)\nGet h:%d(%2.1f%%) m:%d(%2.1f%%) \nSet h:%d(%2.1f%%) m:%d(%2.1f%%)",
 		z.cellCount, ZSize, 100.0*float64(z.cellCount)/ZSize,
-		z.hitGet, z.missedGet, float64(z.hitGet)/float64(z.missedGet),
-		z.hitSet, z.missedSet, float64(z.hitSet)/float64(z.missedSet))
+		z.hitGet, 100.0*float64(z.hitGet)/float64(z.hitGet + z.missedGet), z.missedGet, 100.0*float64(z.missedGet)/float64(z.hitGet + z.missedGet),
+		z.hitSet, 100.0*float64(z.hitSet)/float64(z.hitSet + z.missedSet), z.missedSet, 100.0*float64(z.hitSet)/float64(z.hitSet + z.missedSet))
 }
 
 type ZEntry struct {
