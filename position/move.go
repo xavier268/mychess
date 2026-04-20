@@ -98,8 +98,6 @@ func (pp *Position) revokeRookCastle(color uint8, sq Square) {
 
 // ZobristBitboards index constants – must match HashPosition.
 const (
-	zbWhiteOcc  = 0
-	zbBlackOcc  = 1
 	zbPawnOcc   = 2
 	zbRookOcc   = 3
 	zbBishopOcc = 4

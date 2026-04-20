@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"mychess"
 	"strings"
 	"time"
 
-	"mychess/game"
-	"mychess/position"
+	"github.com/xavier268/mychess"
+
+	"github.com/xavier268/mychess/game"
+	"github.com/xavier268/mychess/position"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"

@@ -2,7 +2,8 @@ package game
 
 import (
 	"fmt"
-	"mychess/position"
+
+	"github.com/xavier268/mychess/position"
 )
 
 // DEBUG : reduced size for debugging

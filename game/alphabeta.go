@@ -2,7 +2,8 @@ package game
 
 import (
 	"context"
-	"mychess/position"
+
+	"github.com/xavier268/mychess/position"
 )
 
 // AlphaBeta implémente l'algorithme Negamax avec élagage alpha-bêta et table de transposition.

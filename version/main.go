@@ -3,7 +3,8 @@ package main
 
 import (
 	"fmt"
-	"mychess"
+
+	"github.com/xavier268/mychess"
 )
 
 func main() {

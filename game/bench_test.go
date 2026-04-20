@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"mychess/position"
+	"github.com/xavier268/mychess/position"
 )
 
 // BenchmarkAnalysis mesure le coût d'une analyse complète (approfondissement itératif

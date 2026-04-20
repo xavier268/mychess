@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"log"
-	"mychess/position"
 	"sync"
+
+	"github.com/xavier268/mychess/position"
 )
 
 // Game capture le contexte d'une partie en cours.

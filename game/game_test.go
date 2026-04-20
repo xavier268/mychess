@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"mychess/position"
+	"github.com/xavier268/mychess/position"
 )
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
