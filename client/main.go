@@ -457,12 +457,15 @@ func (m model) View() tea.View {
 		lipgloss.NewStyle().MarginRight(4).Render(left.String()),
 		right.String(),
 	)
-	return tea.NewView(cols)
+	v := tea.NewView(cols)
+	v.AltScreen = true
+	return v
 }
 
 // ── Point d'entrée ────────────────────────────────────────────────────────────
 
 func main() {
+	fmt.Printf("Memory model : %dM, loading cache ...\n", game.ZSize/1_000_000)
 	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Erreur fatale : %v\n", err)

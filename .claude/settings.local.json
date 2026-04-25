@@ -7,7 +7,13 @@
       "Bash(go test *)",
       "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && head -5 {}')",
       "Bash(go build *)",
-      "Bash(go vet *)"
+      "Bash(go vet *)",
+      "Bash(go env *)",
+      "Bash(grep -r \"WithAlt\\\\|ProgramOption\\\\|AltScreen\\\\|WithOutput\\\\|func With\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land\")",
+      "Bash(grep -r \"func With\\\\|ProgramOption\\\\|AltScreen\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea\")",
+      "Bash(grep -r \"AltScreen\\\\|altscreen\\\\|alt_screen\\\\|EnterAlt\\\\|NewView\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1\")",
+      "Bash(grep -n \"AltScreen\\\\|func NewView\\\\|ViewOption\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1/view.go\")",
+      "Bash(grep -rn \"AltScreen\\\\|func NewView\\\\|type View\\\\b\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1\")"
     ]
   }
 }
