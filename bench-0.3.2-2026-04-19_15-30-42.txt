@@ -1,0 +1,35 @@
+goos: windows
+goarch: amd64
+pkg: mychess/game
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkAnalysis/depth=1-16         	     662	   1818884 ns/op	40005279 B/op	       5 allocs/op
+BenchmarkAnalysis/depth=2-16         	     697	   1900499 ns/op	40022389 B/op	      47 allocs/op
+BenchmarkAnalysis/depth=3-16         	     555	   2102481 ns/op	40078683 B/op	     185 allocs/op
+BenchmarkAnalysis/depth=4-16         	     313	   3670375 ns/op	40656411 B/op	    1601 allocs/op
+BenchmarkAnalysis/depth=5-16         	      56	  25545155 ns/op	45066401 B/op	   11110 allocs/op
+BenchmarkAnalysis/depth=6-16         	       3	 390561233 ns/op	143454128 B/op	  233282 allocs/op
+BenchmarkAlphaBeta/depth=1-16        	     716	   1785586 ns/op	40005239 B/op	       5 allocs/op
+BenchmarkAlphaBeta/depth=2-16        	     673	   1899636 ns/op	40021558 B/op	      45 allocs/op
+BenchmarkAlphaBeta/depth=3-16        	     517	   2681948 ns/op	40129271 B/op	     309 allocs/op
+BenchmarkAlphaBeta/depth=4-16        	     266	   4354472 ns/op	40796756 B/op	    1945 allocs/op
+BenchmarkAlphaBeta/depth=5-16        	      63	  20223659 ns/op	44329318 B/op	    9437 allocs/op
+BenchmarkAlphaBeta/depth=6-16        	       3	 386536833 ns/op	145462560 B/op	  236374 allocs/op
+PASS
+ok  	mychess/game	15.361s
+goos: windows
+goarch: amd64
+pkg: mychess/position
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkNewBigTable-16               	    4206	    308843 ns/op	  311305 B/op	    1305 allocs/op
+BenchmarkGetMoveList_Baseline-16      	  618225	      1826 ns/op	    2304 B/op	       2 allocs/op
+BenchmarkGetMoveList_Castling-16      	  714374	      1656 ns/op	    2352 B/op	       3 allocs/op
+BenchmarkGetMoveList_EnPassant-16     	  810892	      1456 ns/op	    2304 B/op	       2 allocs/op
+BenchmarkGetMovesBB_Queen-16          	41668692	        28.78 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Rook-16           	60627494	        19.47 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Bishop-16         	72981602	        16.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Knight-16         	160639473	         7.475 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_NoEP-16      	80912149	        14.83 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_WithEP-16    	80639199	        14.92 ns/op	       0 B/op	       0 allocs/op
+BenchmarkIsSquareAttacked-16          	144905362	         8.288 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	mychess/position	13.540s

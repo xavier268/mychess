@@ -1,0 +1,35 @@
+goos: windows
+goarch: amd64
+pkg: mychess/game
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkAnalysis/depth=1-16         	     163	   7828632 ns/op	200011517 B/op	       5 allocs/op
+BenchmarkAnalysis/depth=2-16         	     164	   7197974 ns/op	200028552 B/op	      47 allocs/op
+BenchmarkAnalysis/depth=3-16         	     140	   8162866 ns/op	200084859 B/op	     185 allocs/op
+BenchmarkAnalysis/depth=4-16         	     130	   9141696 ns/op	200662556 B/op	    1601 allocs/op
+BenchmarkAnalysis/depth=5-16         	      43	  27618821 ns/op	205072558 B/op	   11110 allocs/op
+BenchmarkAnalysis/depth=6-16         	       3	 385091367 ns/op	302535984 B/op	  231185 allocs/op
+BenchmarkAlphaBeta/depth=1-16        	     170	   7366262 ns/op	200011418 B/op	       5 allocs/op
+BenchmarkAlphaBeta/depth=2-16        	     158	   7672566 ns/op	200027706 B/op	      45 allocs/op
+BenchmarkAlphaBeta/depth=3-16        	     150	   7851632 ns/op	200135416 B/op	     309 allocs/op
+BenchmarkAlphaBeta/depth=4-16        	     121	   9828365 ns/op	200802903 B/op	    1945 allocs/op
+BenchmarkAlphaBeta/depth=5-16        	      49	  25963608 ns/op	204329941 B/op	    9429 allocs/op
+BenchmarkAlphaBeta/depth=6-16        	       3	 392540100 ns/op	304492256 B/op	  234168 allocs/op
+PASS
+ok  	mychess/game	14.810s
+goos: windows
+goarch: amd64
+pkg: mychess/position
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkNewBigTable-16               	    4214	    304277 ns/op	  311305 B/op	    1305 allocs/op
+BenchmarkGetMoveList_Baseline-16      	  749592	      1541 ns/op	    2304 B/op	       2 allocs/op
+BenchmarkGetMoveList_Castling-16      	  761527	      1608 ns/op	    2352 B/op	       3 allocs/op
+BenchmarkGetMoveList_EnPassant-16     	  863967	      1412 ns/op	    2304 B/op	       2 allocs/op
+BenchmarkGetMovesBB_Queen-16          	41489472	        28.83 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Rook-16           	61255117	        19.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Bishop-16         	73312438	        16.43 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Knight-16         	160154901	         7.493 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_NoEP-16      	80708620	        14.81 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_WithEP-16    	80514217	        14.98 ns/op	       0 B/op	       0 allocs/op
+BenchmarkIsSquareAttacked-16          	144139209	         8.307 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	mychess/position	13.638s

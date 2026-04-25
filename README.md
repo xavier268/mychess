@@ -2,6 +2,8 @@
 
 Moteur d'échecs écrit en Go, avec une interface TUI basée sur BubbleTea.
 
+📈 [Historique des performances par version](history.md)
+
 ---
 
 ## Structure du projet
