@@ -261,9 +261,9 @@ func (p Position) DoMove(m Move) (Position, Move) {
 	// King squares (in Status, separate from colOcc):
 	pp.Hash ^= DefaultZT.ZobristKing[WHITE][p.status.GetKingPosition(WHITE)]
 	pp.Hash ^= DefaultZT.ZobristKing[BLACK][p.status.GetKingPosition(BLACK)]
-	// EP phantom in pawnOcc (rank 7 for WHITE's turn target, rank 0 for BLACK's):
+	// EP phantom in pawnOcc (rank 5 for WHITE's turn target, rank 2 for BLACK's):
 	if m.PrevEPFile >= 0 {
-		phantomRank := int(1-turn) * 7 // WHITE to move → 7; BLACK to move → 0
+		phantomRank := 5 - 3*int(turn) // WHITE to move → 5 (black's phantom); BLACK to move → 2 (white's phantom)
 		pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][Sq(phantomRank, int(m.PrevEPFile))]
 	}
 
@@ -380,23 +380,17 @@ func (p Position) DoMove(m Move) (Position, Move) {
 		case ROOK:
 			pp.revokeRookCastle(turn, m.From)
 		case PAWN:
-			// Double push: set new en passant phantom.
-			// Only place the phantom if the target square is unoccupied; if a
-			// piece already sits there the phantom would be invisible (masked out
-			// by colOcc in phantom detection) and would corrupt pawnOcc on undo.
-			allOcc := pp.colOcc[WHITE] | pp.colOcc[BLACK]
+			// Double push: place the EP phantom at the intermediate square (rank 2
+			// for white, rank 5 for black). That square is always empty because the
+			// pawn just traversed it, so no occupancy guard is needed.
 			if turn == WHITE && m.From.Rank() == 1 && m.To.Rank() == 3 {
-				phantomSq := Sq(0, m.From.File())
-				if !allOcc.IsSet(phantomSq) {
-					pp.pawnOcc |= phantomSq.Bitboard()
-					pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
-				}
+				phantomSq := Sq(2, m.From.File())
+				pp.pawnOcc |= phantomSq.Bitboard()
+				pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
 			} else if turn == BLACK && m.From.Rank() == 6 && m.To.Rank() == 4 {
-				phantomSq := Sq(7, m.From.File())
-				if !allOcc.IsSet(phantomSq) {
-					pp.pawnOcc |= phantomSq.Bitboard()
-					pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
-				}
+				phantomSq := Sq(5, m.From.File())
+				pp.pawnOcc |= phantomSq.Bitboard()
+				pp.Hash ^= DefaultZT.ZobristBitboards[zbPawnOcc][phantomSq]
 			}
 		}
 	}
@@ -484,8 +478,8 @@ func (p Position) UndoMove(m Move) Position {
 	pp.pawnOcc &= pp.colOcc[WHITE] | pp.colOcc[BLACK]
 	// Restore the phantom that existed before the move
 	if m.PrevEPFile >= 0 {
-		// Phantom rank: 7 when it's WHITE's turn (black created it), 0 when BLACK's turn
-		phantomRank := 7 * (1 - int(turn))
+		// Phantom rank: 5 when WHITE made the move (black's phantom), 2 when BLACK made the move (white's phantom)
+		phantomRank := 5 - 3*int(turn)
 		pp.pawnOcc |= Sq(phantomRank, int(m.PrevEPFile)).Bitboard()
 	}
 

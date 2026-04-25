@@ -25,28 +25,29 @@ func (p Position) GetBishopMovesFromSquareBB(turn uint8, sq Square) (res Bitboar
 
 // GetPawnMovesFromSquareBB returns all pawn moves including en passant.
 // The PawnAttackSet map handles forward-move blocking and regular captures.
-// En passant is detected via phantom pawns (in pawnOcc but not in colOcc) at rank 0 (white EP) or rank 7 (black EP).
+// En passant is detected via phantom pawns (in pawnOcc but not in colOcc).
+// The phantom sits at the capture landing square: rank 5 for black's double
+// push (white captures there), rank 2 for white's double push (black captures
+// there). That square is always empty, so phantom == landing square directly.
 func (p Position) GetPawnMovesFromSquareBB(turn uint8, sq Square) (res Bitboard) {
 	occ := p.colOcc[WHITE] | p.colOcc[BLACK]
 	res = BT.PawnAttackSet[turn][sq][occ&BT.PawnMask[turn][sq]] & ^p.colOcc[turn]
 
-	// En passant: phantom pawns are in pawnOcc but not in colOcc
+	// En passant: phantom is at the landing square (rank 5 for white captures, rank 2 for black captures)
 	phantoms := p.pawnOcc & ^occ
 	r, f := sq.RF()
 	if turn == WHITE && r == 4 {
-		// Black's en passant signal is a phantom at rank 7 (adjacent file)
-		if f > 0 && phantoms.IsSet(Sq(7, f-1)) {
+		if f > 0 && phantoms.IsSet(Sq(5, f-1)) {
 			res = res.Set(Sq(5, f-1))
 		}
-		if f < 7 && phantoms.IsSet(Sq(7, f+1)) {
+		if f < 7 && phantoms.IsSet(Sq(5, f+1)) {
 			res = res.Set(Sq(5, f+1))
 		}
 	} else if turn == BLACK && r == 3 {
-		// White's en passant signal is a phantom at rank 0 (adjacent file)
-		if f > 0 && phantoms.IsSet(Sq(0, f-1)) {
+		if f > 0 && phantoms.IsSet(Sq(2, f-1)) {
 			res = res.Set(Sq(2, f-1))
 		}
-		if f < 7 && phantoms.IsSet(Sq(0, f+1)) {
+		if f < 7 && phantoms.IsSet(Sq(2, f+1)) {
 			res = res.Set(Sq(2, f+1))
 		}
 	}

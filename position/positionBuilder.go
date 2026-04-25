@@ -65,11 +65,13 @@ func (p *Position) AddKing(side uint8, kingsq string) *Position {
 	return p
 }
 
-// Set the EnPassant signal for the provided side. Provied a square position, but only the file is used.
+// SetEnPassant records an en passant opportunity for the given side.
+// Only the file of where is used. The phantom is placed at rank 2 (white's
+// double push) or rank 5 (black's double push) — the capture landing square.
 func (p *Position) SetEnPassant(side uint8, where string) *Position {
 	side = side & 1
-	file := SqParse(where).File() // ignore provided rank
-	p.pawnOcc |= 1 << (Sq(int(7*side), file))
+	file := SqParse(where).File()
+	p.pawnOcc |= 1 << (Sq(2+3*int(side), file))
 	return p
 }
 

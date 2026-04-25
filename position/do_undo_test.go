@@ -96,7 +96,7 @@ func TestRoundTrip_SinglePush(t *testing.T) {
 }
 
 func TestRoundTrip_DoublePush(t *testing.T) {
-	// Double push creates an EP phantom at Sq(0, file) = rank-0 d-file = d1.
+	// Double push creates an EP phantom at Sq(2, file) = rank-2 d-file = d3.
 	orig := *new(Position).
 		AddKing(WHITE, "e1").AddKing(BLACK, "e8").
 		AddPawn(WHITE, "d2")
@@ -104,7 +104,7 @@ func TestRoundTrip_DoublePush(t *testing.T) {
 }
 
 func TestRoundTrip_BlackDoublePush(t *testing.T) {
-	// Black double push creates EP phantom at Sq(7, file) = rank-7 e-file = e8.
+	// Black double push creates EP phantom at Sq(5, file) = rank-5 e-file = e6.
 	orig := *new(Position).
 		AddKing(WHITE, "e1").AddKing(BLACK, "a8").
 		AddPawn(BLACK, "e7")
@@ -129,7 +129,7 @@ func TestRoundTrip_KnightMove(t *testing.T) {
 // ── B. En passant ─────────────────────────────────────────────────────────────
 
 func TestRoundTrip_EnPassantWhite(t *testing.T) {
-	// Black just double-pushed d7-d5; phantom at d8 (Sq(7,3)).
+	// Black just double-pushed d7-d5; phantom at d6 (Sq(5,3)).
 	// White pawn on e5 captures en passant to d6.
 	orig := *new(Position).
 		AddKing(WHITE, "e1").AddKing(BLACK, "a8").
@@ -139,7 +139,7 @@ func TestRoundTrip_EnPassantWhite(t *testing.T) {
 }
 
 func TestRoundTrip_EnPassantBlack(t *testing.T) {
-	// White just double-pushed e2-e4; phantom at e1 (Sq(0,4)).
+	// White just double-pushed e2-e4; phantom at e3 (Sq(2,4)).
 	// Black pawn on d4 captures en passant to e3.
 	orig := *new(Position).
 		AddKing(WHITE, "h1").AddKing(BLACK, "e8").

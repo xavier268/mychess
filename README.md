@@ -128,12 +128,16 @@ Constantes : `CanCastleKingSide = 0b10000000`, `CanCastleQueenSide = 0b01000000`
 
 Lors d'une avance de deux cases, l'opportunité de prise en passant est encodée par un **pion fantôme** : un bit dans `pawnOcc` **sans bit correspondant** dans `colOcc`.
 
-| Côté ayant avancé de deux | Rang du fantôme | Formule |
-|---|---|---|
-| BLANC | rang 0 | `Sq(0, colonne)` |
-| NOIR | rang 7 | `Sq(7, colonne)` |
+Le fantôme est placé à la **case intermédiaire** — celle que le pion vient de traverser — qui est garantie libre puisque la poussée double serait bloquée si elle ne l'était pas :
 
-Les rangs 0 et 7 ne peuvent pas contenir de vrais pions (ils auraient promu), donc un bit dans `pawnOcc` sans `colOcc` correspondant y est sans ambiguïté un marqueur de prise en passant.
+| Côté ayant avancé de deux | Rang du fantôme | Exemple |
+|---|---|---|
+| BLANC (rang 1 → rang 3) | rang 2 | e2-e4 → fantôme en e3 |
+| NOIR (rang 6 → rang 4) | rang 5 | e7-e5 → fantôme en e6 |
+
+Le fantôme coïncide exactement avec la case d'atterrissage de la prise en passant adverse, ce qui simplifie la détection : il suffit de vérifier que la case diagonale cible est un fantôme.
+
+Les rangs 2 et 5 peuvent contenir de vrais pions, mais ceux-ci sont dans `colOcc` alors que le fantôme ne l'est pas. La distinction reste sans ambiguïté :
 
 **Détection** (dans `GetPawnMovesFromSquareBB`) :
 
@@ -143,7 +147,7 @@ fantômes = pawnOcc & ^(colOcc[WHITE] | colOcc[BLACK])
 
 **Nettoyage** : `pawnOcc &= colOcc[WHITE] | colOcc[BLACK]` — supprime tous les bits fantômes en une opération.
 
-**Garde de placement** : le fantôme n'est écrit que si la case cible est libre. Si une pièce occupe déjà le rang 0/7 à la même colonne, le fantôme serait masqué par `colOcc` et corromprait `pawnOcc` au défaire ; il est silencieusement ignoré.
+Aucune garde de placement n'est nécessaire : la case intermédiaire est toujours libre lors d'une poussée double légale.
 
 ---
 
@@ -287,7 +291,7 @@ Après tout chemin, si une tour a été capturée, le droit de roque corresponda
 **Cycle de vie du fantôme EP dans DoMove** :
 
 1. L'ancien fantôme est extrait du hash (XOR) puis nettoyé de `pawnOcc`.
-2. Si le coup est une poussée double et que la case cible du fantôme est libre, le nouveau fantôme est placé dans `pawnOcc` et intégré dans le hash (XOR).
+2. Si le coup est une poussée double, le nouveau fantôme est placé à la case intermédiaire (`Sq(2, col)` pour blanc, `Sq(5, col)` pour noir) dans `pawnOcc` et intégré dans le hash (XOR). Aucune garde d'occupation n'est nécessaire : cette case est toujours libre.
 
 #### 9.3 `UndoMove(m Move) Position`
 
