@@ -125,16 +125,21 @@ func (pp *Position) hashXORPieceType(sq Square, pt Piece) {
 
 // ── move-list generation ──────────────────────────────────────────────────────
 
-// GetMoveList returns all pseudo-legal moves for the side to move.
-// Illegal moves that leave the own king in check are NOT filtered.
+// checkBonus is added to a move's score when it gives check to the opponent.
+// Value chosen to rank quiet checks above rook captures (4) but below queen captures (7).
+const checkBonus uint8 = 5
+
+// GetMoveList returns all legal moves for the side to move, sorted by descending score.
+// Illegal moves that leave the own king in check are filtered out here.
+// Moves that give check receive a score bonus of checkBonus.
 // Promotion is expanded into four moves (Q/R/B/N).
 // Castling moves are included.
 // Undo fields are NOT populated here; DoMove fills them.
 func (p Position) GetMoveList() []Move {
-	moves := make([]Move, 0, 32)
 	turn := p.status.GetTurn()
 	promotionRank := int((1 - turn) * 7) // WHITE → 7, BLACK → 0
 
+	candidates := make([]Move, 0, 32)
 	for fromSq := range p.colOcc[turn].AllSetSquares {
 		bb := p.GetMovesBB(fromSq)
 		for toSq := range bb.AllSetSquares {
@@ -147,7 +152,7 @@ func (p Position) GetMoveList() []Move {
 			// Pawn reaching the last rank → expand into four promotion moves
 			if p.pawnOcc.IsSet(fromSq) && toSq.Rank() == promotionRank {
 				for _, piece := range []Piece{QUEEN, ROOK, BISHOP, KNIGHT} {
-					moves = append(moves, Move{
+					candidates = append(candidates, Move{
 						From:      fromSq,
 						To:        toSq,
 						Promotion: piece,
@@ -155,7 +160,7 @@ func (p Position) GetMoveList() []Move {
 					})
 				}
 			} else {
-				moves = append(moves, Move{
+				candidates = append(candidates, Move{
 					From:      fromSq,
 					To:        toSq,
 					Promotion: EMPTY,
@@ -164,8 +169,20 @@ func (p Position) GetMoveList() []Move {
 			}
 		}
 	}
+	candidates = append(candidates, p.GetCastlingMoveList()...)
 
-	moves = append(moves, p.GetCastlingMoveList()...)
+	moves := make([]Move, 0, len(candidates))
+	for _, m := range candidates {
+		pp, _ := p.DoMove(m)
+		if pp.IsSquareAttacked(pp.KingPosition(turn), 1^turn) {
+			continue // own king left in check: illegal
+		}
+		if pp.IsCheck() {
+			m.Score += checkBonus // move gives check to opponent
+		}
+		moves = append(moves, m)
+	}
+
 	slices.SortFunc(moves, func(a, b Move) int { return int(b.Score) - int(a.Score) })
 	return moves
 }

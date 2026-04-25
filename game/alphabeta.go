@@ -98,44 +98,14 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 
 	bestScore := position.LOST - 1 // sentinelle : pire que tout score réel
 	var bestMove position.Move
-	legalMoves := 0
 
 	for _, move := range moves {
-		// DEBUG
-		// if msg := g.Position.Validate(); msg != "" {
-		// 	g.Log.Fatalf("CORRUPTION before DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		// }
-
-		mover := g.Position.Turn()
 		g.Position, move = g.Position.DoMove(move)
-		// DEBUG
-		// if msg := g.Position.Validate(); msg != "" {
-		// 	g.Log.Fatalf("CORRUPTION after DoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		// }
-
-		// Filtre de légalité : un coup qui laisse son propre roi en prise est illégal.
-		// On utilise GetMoveList en pseudo-légal (pour éviter de filtrer pendant la
-		// génération), puis on rejette ici les coups illégaux. Conséquence importante :
-		// aucun roi ne peut jamais être capturé, ce qui évite les états fantômes
-		// (status.KingStatus pointant sur une case vide ou occupée par l'adversaire).
-		if g.Position.IsSquareAttacked(g.Position.KingPosition(mover), 1^mover) {
-			g.Position = g.Position.UndoMove(move)
-			// DEBUG
-			// if msg := g.Position.Validate(); msg != "" {
-			// 	g.Log.Fatalf("CORRUPTION after UndoMove(%s) [illegal] at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-			// }
-			continue
-		}
-		legalMoves++
 
 		// Negamax : on appelle récursivement pour l'adversaire.
 		score := -g.AlphaBeta(ctx, -beta, -alpha, depth-1)
 
 		g.Position = g.Position.UndoMove(move)
-		// DEBUG
-		// if msg := g.Position.Validate(); msg != "" {
-		// 	g.Log.Fatalf("CORRUPTION after UndoMove(%s) at depth %d: %s\n%s", move, depth, msg, g.Position.DebugString())
-		// }
 
 		// Si le contexte a expiré pendant l'appel récursif, on remonte sans stocker.
 		if ctx.Err() != nil {
@@ -152,15 +122,6 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 			// il ne laissera jamais cette position se produire → on arrête la recherche.
 			break
 		}
-	}
-
-	// CAS TERMINAL bis : tous les coups pseudo-légaux étaient illégaux.
-	// Distinction mat / pat identique au cas len(moves) == 0.
-	if legalMoves == 0 {
-		if g.Position.IsCheck() {
-			return position.LOST
-		}
-		return position.DRAW
 	}
 
 	// ── 4. SAUVEGARDE DANS LA TABLE DE TRANSPOSITION ──────────────────────────

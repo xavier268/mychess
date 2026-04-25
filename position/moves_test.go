@@ -23,8 +23,8 @@ func TestGetMoves1(t *testing.T) {
 	for i, m := range moves {
 		fmt.Println(i, "\t", m.String())
 	}
-	if len(moves) != 24 {
-		t.Error("wrong number of moves, expected 24, got", len(moves))
+	if len(moves) != 6 {
+		t.Error("wrong number of moves, expected 6, got", len(moves))
 	}
 
 }

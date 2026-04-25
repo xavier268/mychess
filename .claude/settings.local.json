@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(task build *)",
+      "Bash(task test *)",
+      "Bash(grep -a -E \"--- FAIL\")",
+      "Bash(go test *)"
+    ]
+  }
+}
