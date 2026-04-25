@@ -2,7 +2,7 @@
 // However, playing level is already quite interesting ...
 package mychess
 
-const VERSION = "0.4.2"
+const VERSION = "0.4.3"
 const COPYRIGHT = "(c) 2025-2026 by Xavier Gandillot (aka xavier268)"
 
 // Dynamic vars
