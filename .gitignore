@@ -28,6 +28,7 @@ go.work.sum
 *_test.bin
 magic/magicmap_test.bin
 
+
 ## binaries
 *.bin
 /bin
