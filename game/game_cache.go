@@ -26,7 +26,7 @@ const cacheFormatVersion = uint32(1)
 // findBestCache scans dirs for cache files matching the current ZSize and returns
 // the path and fill percentage of the one with the highest fill, or ("", 0, false).
 func findBestCache(dirs []string) (path string, fillPct int, found bool) {
-	prefix := fmt.Sprintf("mychess_cache_%d_", ZSize)
+	prefix := fmt.Sprintf("mychess_cache_%dM_", ZSize/1_000_000)
 	bestPct := -1
 
 	for _, dir := range dirs {
