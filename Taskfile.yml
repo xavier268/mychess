@@ -54,10 +54,10 @@ tasks:
   cache:
     desc: generate cache file 
     cmds:
-      - go run -tags low ./gencache/...  -fill 80 -dir ./bin/
-      - go run  ./gencache/...  -fill 9 -dir ./bin/
-      - go run -tags high ./gencache/...  -fill 7 -dir ./bin/
-      - go run -tags ultra ./gencache/...  -fill 2 -dir ./bin/
+      - go run -tags low ./gencache/...  -fill 75 -dir ./bin/
+      - go run  ./gencache/...  -fill 75 -dir ./bin/
+      - go run -tags high ./gencache/...  -fill 75 -dir ./bin/
+      - go run -tags ultra ./gencache/...  -fill 75 -dir ./bin/
 
   version:
     desc: display versionning information
