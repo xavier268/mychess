@@ -1,0 +1,38 @@
+?   	github.com/xavier268/mychess	[no test files]
+?   	github.com/xavier268/mychess/client	[no test files]
+goos: windows
+goarch: amd64
+pkg: github.com/xavier268/mychess/game
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkAnalysis/depth=1-16         	     152	   7303870 ns/op	200008246 B/op	       3 allocs/op
+BenchmarkAnalysis/depth=2-16         	     172	   7026601 ns/op	200019305 B/op	      45 allocs/op
+BenchmarkAnalysis/depth=3-16         	     136	   8912627 ns/op	200063801 B/op	     183 allocs/op
+BenchmarkAnalysis/depth=4-16         	     100	  14321146 ns/op	200527157 B/op	    1727 allocs/op
+BenchmarkAnalysis/depth=5-16         	      25	  48160636 ns/op	204697104 B/op	   11888 allocs/op
+BenchmarkAnalysis/depth=6-16         	       2	 821827400 ns/op	292430000 B/op	  243892 allocs/op
+BenchmarkAlphaBeta/depth=1-16        	     148	   7762290 ns/op	200008212 B/op	       3 allocs/op
+BenchmarkAlphaBeta/depth=2-16        	     156	   7904644 ns/op	200018769 B/op	      43 allocs/op
+BenchmarkAlphaBeta/depth=3-16        	     134	   8779734 ns/op	200100788 B/op	     307 allocs/op
+BenchmarkAlphaBeta/depth=4-16        	      85	  15170644 ns/op	200646373 B/op	    2153 allocs/op
+BenchmarkAlphaBeta/depth=5-16        	      30	  39991340 ns/op	204006672 B/op	   10309 allocs/op
+BenchmarkAlphaBeta/depth=6-16        	       2	 774031850 ns/op	293968336 B/op	  245347 allocs/op
+PASS
+ok  	github.com/xavier268/mychess/game	15.780s
+goos: windows
+goarch: amd64
+pkg: github.com/xavier268/mychess/position
+cpu: Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz
+BenchmarkNewBigTable-16               	    4254	    346597 ns/op	  311300 B/op	    1305 allocs/op
+BenchmarkGetMoveList_Baseline-16      	  177376	      7630 ns/op	    2432 B/op	       2 allocs/op
+BenchmarkGetMoveList_Castling-16      	  155980	      7649 ns/op	    2480 B/op	       3 allocs/op
+BenchmarkGetMoveList_EnPassant-16     	  148845	      7804 ns/op	    2432 B/op	       2 allocs/op
+BenchmarkGetMovesBB_Queen-16          	41212045	        29.05 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Rook-16           	57834669	        20.55 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Bishop-16         	71132608	        16.96 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Knight-16         	150520122	         7.815 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_NoEP-16      	82132149	        14.73 ns/op	       0 B/op	       0 allocs/op
+BenchmarkGetMovesBB_Pawn_WithEP-16    	80646244	        15.53 ns/op	       0 B/op	       0 allocs/op
+BenchmarkIsSquareAttacked-16          	131859610	         9.391 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/xavier268/mychess/position	13.893s
+?   	github.com/xavier268/mychess/version	[no test files]
