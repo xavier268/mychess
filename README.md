@@ -11,6 +11,8 @@ Moteur d'échecs écrit en Go, avec une interface TUI basée sur BubbleTea.
 ```
 position/   — représentation de l'échiquier, génération des coups, évaluation statique
 game/       — recherche alpha-bêta, table de transposition, boucle d'analyse
+cache/      — génération et lecture des fichiers de cache pré-calculés
+gencache/   — commande standalone pour pré-calculer un cache sur disque
 client/     — interface textuelle (TUI)
 ```
 
@@ -425,10 +427,10 @@ Chaque entrée contient :
 
 | Tag | Entrées | Mémoire approx. |
 |---|---|---|
-| `low` | 100 K | ~8 Mo |
+| `low` | 1 M | ~90 Mo |
 | *(défaut)* | 5 M | ~400 Mo |
-| `high` | 20 M | ~1,6 Go |
-| `ultra` | 500 M | ~40 Go |
+| `high` | 50 M | ~4 Go |
+| `ultra` | 500 M | ~25 Go |
 
 ### 3. Approfondissement itératif
 
@@ -440,6 +442,53 @@ L'analyse tourne dans une goroutine séparée et reçoit un `context.Context`. C
 
 ---
 
+---
+
+## Package `cache` / commande `gencache` — Cache pré-calculé
+
+Le package `cache` et la commande `gencache` permettent de pré-calculer une table de transposition depuis la position initiale et de la sauvegarder sur disque, afin que le moteur démarre avec une table déjà chaude.
+
+### Nommage des fichiers
+
+```
+mychess_cache_<N>M_<pct>.bin
+```
+
+- `<N>` : taille de la ZMap en millions d'entrées (dépend du build tag)
+- `<pct>` : pourcentage de remplissage cible sur 2 chiffres (ex. `60` → table remplie à 60 %)
+
+Exemples : `mychess_cache_5M_60.bin`, `mychess_cache_50M_10.bin`.
+
+### Génération
+
+```
+gencache [-dir <répertoire>] [-fill <pct>]
+```
+
+| Flag | Défaut | Description |
+|---|---|---|
+| `-dir` | `.` | répertoire de sortie |
+| `-fill` | `75` | pourcentage de remplissage cible (1–99) |
+
+### Chargement au démarrage
+
+`NewGame()` scanne les répertoires `./`, `./bin/` et `../` à la recherche du fichier de cache dont le pourcentage de remplissage est le plus élevé et dont le `ZSize` correspond au build courant. En cas de succès, la `ZobristTable` et la `ZMap` sont restaurées ; l'analyse repart immédiatement à la profondeur déjà explorée. Si aucun fichier compatible n'est trouvé, une table vide est utilisée.
+
+### Format binaire
+
+```
+[8]byte   magic       "MYCHCACH"
+uint32    version     1
+uint64    ZSize       nombre d'entrées (vérifié contre le build)
+uint32    fillPct     pourcentage de remplissage (informatif)
+[…]       ZobristTable
+[…]       ZMap.data
+```
+
+---
+
 ## Package `client` — Interface TUI
 
-Interface textuelle interactive construite avec [BubbleTea](https://github.com/charmbracelet/bubbletea). Permet de jouer contre le moteur, de visualiser l'analyse en cours (profondeur, meilleur coup, score) et de naviguer dans l'historique de la partie.
+Interface textuelle interactive construite avec [BubbleTea v2](https://charm.land/bubbletea). Permet de jouer contre le moteur, de visualiser l'analyse en cours (profondeur, meilleur coup, score) et de naviguer dans l'historique de la partie.
+
+Au démarrage, le client affiche `Memory model : <N>M, loading ...` pendant le chargement du cache. Une fois le TUI lancé, le terminal bascule sur le buffer alternatif (alt screen) : le message disparaît. À la sortie (`x`), le buffer principal est restauré.

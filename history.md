@@ -140,6 +140,20 @@ L'augmentation des allocations à toutes les profondeurs confirme que le correct
 
 ---
 
+## v0.4.3 — Cache pré-calculé et démarrage avec message
+
+**Changements :**
+
+1. **Correction du chargement du cache** : `findBestCache` construisait le préfixe de recherche avec `%d` (ex. `mychess_cache_5000000_`) alors que `cache.FileName` écrit les fichiers avec le format `%dM` (ex. `mychess_cache_5M_`). Résultat : les fichiers `.bin` présents dans `./bin/` n'étaient jamais trouvés. Un seul caractère corrigé dans `game/game_cache.go`.
+
+2. **Message de démarrage** : avant de lancer le TUI, le client affiche `Memory model : <N>M, loading ...` pendant le chargement du cache.
+
+3. **Buffer alternatif (alt screen)** : le TUI est maintenant déclaré en mode `v.AltScreen = true`. Dès que l'interface s'affiche, le terminal bascule sur le buffer alternatif — le message de démarrage disparaît proprement. À la sortie (`x`), le buffer principal est restauré et le message réapparaît.
+
+**Impact sur les performances :** aucune modification du moteur de recherche ni de la génération de coups. À froid (sans cache), les performances sont identiques à v0.4.1. Avec un cache pré-calculé, l'analyse débute immédiatement à la profondeur déjà explorée lors de la génération, sans aucun cold start.
+
+---
+
 ## Synthèse
 
 ```
