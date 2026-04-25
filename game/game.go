@@ -39,6 +39,17 @@ type Game struct {
 }
 
 func NewGame() *Game {
+	if zt, zmap, path, ok := tryLoadCache(SearchDirs); ok {
+		position.RestoreDefaultZT(zt)
+		g := &Game{
+			Position: position.StartPosition,
+			History:  make([]position.Move, 0, 100),
+			Z:        zmap,
+			Log:      *log.Default(),
+		}
+		g.Log.Printf("cache loaded: %s (fill %.1f%%)", path, zmap.FillPercent())
+		return g
+	}
 	return &Game{
 		Position: position.StartPosition,
 		History:  make([]position.Move, 0, 100),

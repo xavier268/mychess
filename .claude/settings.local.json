@@ -4,7 +4,10 @@
       "Bash(task build *)",
       "Bash(task test *)",
       "Bash(grep -a -E \"--- FAIL\")",
-      "Bash(go test *)"
+      "Bash(go test *)",
+      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && head -5 {}')",
+      "Bash(go build *)",
+      "Bash(go vet *)"
     ]
   }
 }

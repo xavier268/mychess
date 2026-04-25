@@ -43,6 +43,22 @@ tasks:
       - go build -o ./bin/mychess-{{.VERSION}}high{{.EXE}} -tags high -ldflags "-X 'github.com/xavier268/mychess.BUILDDATE={{.DATE}}' -X 'github.com/xavier268/mychess.BUILDHASH=$(git rev-parse HEAD)'" ./client/...
       - go build -o ./bin/mychess-{{.VERSION}}ultra{{.EXE}} -tags ultra -ldflags "-X 'github.com/xavier268/mychess.BUILDDATE={{.DATE}}' -X 'github.com/xavier268/mychess.BUILDHASH=$(git rev-parse HEAD)'" ./client/...
 
+  gencache:
+    desc: build gencache tool (all memory configurations)
+    cmds:
+      - go build -o ./bin/gencache{{.EXE}} ./gencache/...
+      - go build -o ./bin/gencache-low{{.EXE}} -tags low ./gencache/...
+      - go build -o ./bin/gencache-high{{.EXE}} -tags high ./gencache/...
+      - go build -o ./bin/gencache-ultra{{.EXE}} -tags ultra ./gencache/...
+
+  cache:
+    desc: generate cache file 
+    cmds:
+      - go run -tags low ./gencache/...  -fill 80 -dir ./bin/
+      - go run  ./gencache/...  -fill 9 -dir ./bin/
+      - go run -tags high ./gencache/...  -fill 7 -dir ./bin/
+      - go run -tags ultra ./gencache/...  -fill 2 -dir ./bin/
+
   version:
     desc: display versionning information
     cmds:
