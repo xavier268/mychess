@@ -154,6 +154,18 @@ L'augmentation des allocations à toutes les profondeurs confirme que le correct
 
 ---
 
+## v0.4.4 — Suppression de la duplication de `CacheMagic`
+
+**Changements :**
+
+1. **Source de vérité unique pour le format binaire** : la constante `[8]byte{'M','Y','C','H','C','A','C','H'}` était dupliquée dans `cache/cache.go` et `game/game_cache.go`. Elle est déplacée dans le package racine (`version.go`) comme `mychess.CacheMagic`, exportée et référencée par les deux packages.
+
+2. **Uniformisation du taux de remplissage** : la tâche `task cache` utilisait des taux hétérogènes selon le modèle mémoire (80 / 9 / 7 / 2 %). Tous sont désormais fixés à **75 %** pour garantir un niveau cohérent de préchauffage quelle que soit la taille de la `ZMap`.
+
+**Impact sur les performances :** aucun — refactoring pur, sans modification algorithmique.
+
+---
+
 ## Synthèse
 
 ```

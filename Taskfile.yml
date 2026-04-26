@@ -52,7 +52,7 @@ tasks:
       - go build -o ./bin/gencache-ultra{{.EXE}} -tags ultra ./gencache/...
 
   cache:
-    desc: generate cache file 
+    desc: generate cache file  - this will TAKE TIME ...
     cmds:
       - go run -tags low ./gencache/...  -fill 75 -dir ./bin/
       - go run  ./gencache/...  -fill 75 -dir ./bin/

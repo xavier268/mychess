@@ -477,13 +477,15 @@ gencache [-dir <répertoire>] [-fill <pct>]
 ### Format binaire
 
 ```
-[8]byte   magic       "MYCHCACH"
+[8]byte   magic       mychess.CacheMagic  ("MYCHCACH")
 uint32    version     1
 uint64    ZSize       nombre d'entrées (vérifié contre le build)
 uint32    fillPct     pourcentage de remplissage (informatif)
 […]       ZobristTable
 […]       ZMap.data
 ```
+
+La constante `mychess.CacheMagic` est définie dans le package racine (`version.go`) et partagée par `cache` et `game/game_cache` — source de vérité unique pour le format binaire.
 
 ---
 
