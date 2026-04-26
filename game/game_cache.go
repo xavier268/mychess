@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/xavier268/mychess"
 	"github.com/xavier268/mychess/position"
 )
 
@@ -17,9 +18,6 @@ import (
 // The first directory that contains a valid file wins; among all candidates in all
 // directories the file with the highest fill percentage is chosen.
 var SearchDirs = []string{".", "./bin", ".."}
-
-// binary format constants — must stay in sync with cache/cache.go
-var cacheMagic = [8]byte{'M', 'Y', 'C', 'H', 'C', 'A', 'C', 'H'}
 
 const cacheFormatVersion = uint32(1)
 
@@ -78,7 +76,7 @@ func tryLoadCache(dirs []string) (position.ZobristTable, *ZMap, string, bool) {
 	br := bufio.NewReaderSize(f, 1<<16)
 
 	var m [8]byte
-	if _, err := io.ReadFull(br, m[:]); err != nil || m != cacheMagic {
+	if _, err := io.ReadFull(br, m[:]); err != nil || m != mychess.CacheMagic {
 		return position.ZobristTable{}, nil, "", false
 	}
 

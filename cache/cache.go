@@ -25,11 +25,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/xavier268/mychess"
 	"github.com/xavier268/mychess/game"
 	"github.com/xavier268/mychess/position"
 )
-
-var magic = [8]byte{'M', 'Y', 'C', 'H', 'C', 'A', 'C', 'H'}
 
 const formatVersion = uint32(1)
 
@@ -82,7 +81,7 @@ func writeFile(path string, fillPct int, z *game.ZMap, zt *position.ZobristTable
 
 	bw := bufio.NewWriterSize(f, 1<<20) // 1 MB write buffer
 
-	if _, err := bw.Write(magic[:]); err != nil {
+	if _, err := bw.Write(mychess.CacheMagic[:]); err != nil {
 		return err
 	}
 	if err := binary.Write(bw, binary.LittleEndian, formatVersion); err != nil {
@@ -121,7 +120,7 @@ func Load(dir string, fillPct int) (position.ZobristTable, *game.ZMap, error) {
 	if _, err := io.ReadFull(br, m[:]); err != nil {
 		return position.ZobristTable{}, nil, fmt.Errorf("reading magic: %w", err)
 	}
-	if m != magic {
+	if m != mychess.CacheMagic {
 		return position.ZobristTable{}, nil, fmt.Errorf("not a mychess cache file")
 	}
 
