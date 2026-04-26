@@ -170,36 +170,33 @@ func moveStr(mv position.Move) string {
 }
 
 // buildHistory formats the game history as "1. e2e4 e7e5\n2. ..."
-// Only the last maxLines lines are shown; a "…" prefix indicates truncation.
-func buildHistory(history []position.Move, maxLines int) string {
-	// Each line holds one move pair (white + optional black).
-	// Compute the first half-move index to display.
-	totalPairs := (len(history) + 1) / 2
-	firstPair := 0
-	truncated := false
-	if totalPairs > maxLines {
-		firstPair = totalPairs - maxLines
-		truncated = true
+// Moves are laid out in columns of colSize pairs; a new column is added to
+// the right whenever the current one is full, so all moves remain visible.
+func buildHistory(history []position.Move, colSize int) string {
+	if len(history) == 0 {
+		return ""
 	}
-	firstHalf := firstPair * 2
 
-	var sb strings.Builder
-	if truncated {
-		sb.WriteString("…\n")
-	}
-	for i, mv := range history[firstHalf:] {
-		idx := firstHalf + i
-		if idx%2 == 0 {
-			fmt.Fprintf(&sb, "%d. ", idx/2+1)
+	totalPairs := (len(history) + 1) / 2
+	lines := make([]string, totalPairs)
+	for i := range lines {
+		line := fmt.Sprintf("%d. %s", i+1, moveStr(history[i*2]))
+		if i*2+1 < len(history) {
+			line += " " + moveStr(history[i*2+1])
 		}
-		sb.WriteString(moveStr(mv))
-		if idx%2 == 0 {
-			sb.WriteString(" ")
-		} else {
-			sb.WriteString("\n")
-		}
+		lines[i] = line
 	}
-	return sb.String()
+
+	var cols []string
+	for start := 0; start < len(lines); start += colSize {
+		end := start + colSize
+		if end > len(lines) {
+			end = len(lines)
+		}
+		col := strings.Join(lines[start:end], "\n")
+		cols = append(cols, lipgloss.NewStyle().MarginRight(2).Render(col))
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
 
 // buildStats reads analysis results from the game engine (no lock needed — display only).
@@ -349,7 +346,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.message = errStyle.Render("autoplay: " + err.Error())
 			} else {
 				m.displayPos = m.g.Position
-				m.history = buildHistory(m.g.History, 22)
+				m.history = buildHistory(m.g.History, 20)
 				if !m.checkGameOver() {
 					m.message = okStyle.Render("coup automatique joué")
 					m.g.Z.ResetStats()
@@ -380,7 +377,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.turnStart = time.Now()
 					m.g.Play(mv)
 					m.displayPos = m.g.Position
-					m.history = buildHistory(m.g.History, 22)
+					m.history = buildHistory(m.g.History, 20)
 					if !m.checkGameOver() {
 						m.message = okStyle.Render("joué : " + input)
 						m.g.Z.ResetStats()
