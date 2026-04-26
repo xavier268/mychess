@@ -491,6 +491,10 @@ La constante `mychess.CacheMagic` est définie dans le package racine (`version.
 
 ## Package `client` — Interface TUI
 
-Interface textuelle interactive construite avec [BubbleTea v2](https://charm.land/bubbletea). Permet de jouer contre le moteur, de visualiser l'analyse en cours (profondeur, meilleur coup, score) et de naviguer dans l'historique de la partie.
+Interface textuelle interactive construite avec [BubbleTea v2](https://charm.land/bubbletea). Permet de jouer contre le moteur, de visualiser l'analyse en cours (profondeur, meilleur coup, score) et de consulter l'intégralité de l'historique de la partie.
 
 Au démarrage, le client affiche `Memory model : <N>M, loading ...` pendant le chargement du cache. Une fois le TUI lancé, le terminal bascule sur le buffer alternatif (alt screen) : le message disparaît. À la sortie (`x`), le buffer principal est restauré.
+
+### Historique en colonnes multiples
+
+L'historique est affiché en **colonnes de 20 paires de coups**. Lorsque la partie dépasse 20 paires, une nouvelle colonne apparaît à droite ; le nombre de lignes à l'écran ne change jamais, quelle que soit la longueur de la partie. Tous les coups restent toujours visibles — aucune troncature.

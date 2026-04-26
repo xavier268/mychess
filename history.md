@@ -166,6 +166,18 @@ L'augmentation des allocations à toutes les profondeurs confirme que le correct
 
 ---
 
+## v0.4.5 — Historique en colonnes multiples
+
+**Changements :** amélioration de l'affichage de l'historique dans le TUI (`client/main.go`).
+
+Jusqu'ici, `buildHistory` tronquait les coups anciens pour ne conserver que les 22 dernières paires, affichant un « … » pour signaler la troncature. Désormais, **tous les coups sont toujours visibles** : les 20 premières paires occupent la première colonne, les 20 suivantes s'affichent dans une deuxième colonne à droite, et ainsi de suite. Le nombre de lignes dans le terminal reste constant quelle que soit la longueur de la partie.
+
+Implémentation : `buildHistory` découpe la liste de paires en tranches de `colSize` (20) et assemble les colonnes avec `lipgloss.JoinHorizontal`.
+
+**Impact sur les performances :** aucun — modification purement cosmétique du TUI, sans toucher au moteur de recherche.
+
+---
+
 ## Synthèse
 
 ```

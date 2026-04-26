@@ -180,7 +180,7 @@ func buildHistory(history []position.Move, colSize int) string {
 	totalPairs := (len(history) + 1) / 2
 	lines := make([]string, totalPairs)
 	for i := range lines {
-		line := fmt.Sprintf("%d. %s", i+1, moveStr(history[i*2]))
+		line := fmt.Sprintf("%2d. %s", i+1, moveStr(history[i*2]))
 		if i*2+1 < len(history) {
 			line += " " + moveStr(history[i*2+1])
 		}
