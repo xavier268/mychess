@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyChess</title>
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, monospace;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px 24px 32px;
+    }
+
+    /* ── Connection indicator ── */
+    #ws-status {
+      position: fixed;
+      top: 10px;
+      right: 14px;
+      font-size: 0.75rem;
+      color: #e74c3c;
+    }
+    #ws-status.ok { color: #2ecc71; }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    header h1 {
+      font-size: 1.9rem;
+      color: #f0c040;
+      letter-spacing: 2px;
+    }
+    header p {
+      font-size: 0.78rem;
+      color: #777;
+      margin-top: 4px;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* ── Left column ── */
+    .left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* ── Clocks ── */
+    .clocks {
+      display: flex;
+      gap: 16px;
+    }
+    .clock {
+      padding: 7px 18px;
+      border-radius: 8px;
+      background: #16213e;
+      border: 2px solid #2a3a5e;
+      font-size: 1rem;
+      transition: border-color 0.3s, color 0.3s;
+    }
+    .clock.active {
+      border-color: #f0c040;
+      color: #f0c040;
+    }
+
+    /* ── Board ── */
+    #board { width: 420px; }
+
+    /* ── Controls ── */
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .controls button { width: 140px; }
+
+    button {
+      color: #fff;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    button:disabled { background: #3a3a3a !important; cursor: not-allowed; opacity: 0.6; }
+
+    #auto-btn   { background: #2e7d32; }
+    #auto-btn:hover:not(:disabled)  { background: #1b5e20; }
+
+    #reset-btn  { background: #1565c0; }
+    #reset-btn:hover:not(:disabled) { background: #0d47a1; }
+
+    #quit-btn   { background: #b71c1c; }
+    #quit-btn:hover:not(:disabled)  { background: #7f0000; }
+
+    /* ── Status lines ── */
+    #turn-info {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    #turn-info.gameover {
+      color: #f0c040;
+      font-size: 1.05rem;
+    }
+    #message {
+      min-height: 1.3em;
+      font-size: 0.88rem;
+      color: #aaa;
+      text-align: center;
+    }
+    #message.err { color: #e74c3c; }
+
+    /* ── Right column ── */
+    .right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 240px;
+      max-width: 300px;
+    }
+    .panel {
+      background: #16213e;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .panel h3 {
+      color: #f0c040;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+    #history {
+      font-family: monospace;
+      font-size: 0.83rem;
+      white-space: pre;
+      line-height: 1.7;
+      color: #ccc;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    #stats {
+      font-size: 0.85rem;
+      color: #bbb;
+      line-height: 1.7;
+    }
+    #stats pre {
+      margin-top: 6px;
+      font-size: 0.76rem;
+      color: #777;
+      white-space: pre-wrap;
+    }
+
+    /* ── Promotion modal ── */
+    .promo-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .promo-box {
+      background: #16213e;
+      border: 2px solid #f0c040;
+      border-radius: 14px;
+      padding: 28px 32px 20px;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+    }
+    .promo-box h3 {
+      color: #f0c040;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 20px;
+    }
+    .promo-choices {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .promo-piece {
+      background: #0f1a30;
+      border: 2px solid #2a3a5e;
+      border-radius: 10px;
+      padding: 10px 12px 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      width: 76px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .promo-piece:hover { border-color: #f0c040; background: #1a2a4a; }
+    .promo-piece img   { width: 48px; height: 48px; display: block; }
+    .promo-piece span  { color: #bbb; font-size: 0.75rem; }
+    .promo-cancel {
+      background: #3a3a3a;
+      width: 100%;
+      padding: 8px;
+      font-size: 0.88rem;
+      border-radius: 7px;
+      margin-top: 4px;
+    }
+    .promo-cancel:hover:not(:disabled) { background: #555; }
+  </style>
+</head>
+<body>
+
+<div id="ws-status">⬤ déconnecté</div>
+
+<header>
+  <h1>♟ MyChess</h1>
+  <p id="version-info">chargement…</p>
+</header>
+
+<div class="layout">
+
+  <!-- ── Left column ── -->
+  <div class="left">
+    <div class="clocks">
+      <div class="clock" id="clock-white">♔ Blancs &nbsp;<span id="white-time">0:00</span></div>
+      <div class="clock" id="clock-black">♚ Noirs &nbsp;<span id="black-time">0:00</span></div>
+    </div>
+
+    <div id="board"></div>
+
+    <div class="controls">
+      <button id="auto-btn"   onclick="sendAuto()"  disabled>Auto</button>
+      <button id="reset-btn"  onclick="sendReset()">Nouvelle partie</button>
+      <button id="quit-btn"   onclick="sendQuit()">Quitter</button>
+    </div>
+
+    <div id="turn-info">Connexion…</div>
+    <div id="message"></div>
+  </div>
+
+  <!-- ── Right column ── -->
+  <div class="right">
+    <div class="panel">
+      <h3>Historique</h3>
+      <pre id="history">–</pre>
+    </div>
+    <div class="panel">
+      <h3>Analyse</h3>
+      <div id="stats">–</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Promotion modal -->
+<div id="promo-modal" class="promo-overlay">
+  <div class="promo-box">
+    <h3>Promotion — choisir la pièce</h3>
+    <div class="promo-choices">
+      <button class="promo-piece" onclick="choosePromo('q')"><img id="pi-q" src="" alt=""><span>Dame</span></button>
+      <button class="promo-piece" onclick="choosePromo('r')"><img id="pi-r" src="" alt=""><span>Tour</span></button>
+      <button class="promo-piece" onclick="choosePromo('b')"><img id="pi-b" src="" alt=""><span>Fou</span></button>
+      <button class="promo-piece" onclick="choosePromo('n')"><img id="pi-n" src="" alt=""><span>Cavalier</span></button>
+    </div>
+    <button class="promo-cancel" onclick="cancelPromo()">Annuler</button>
+  </div>
+</div>
+
+<!-- Dependencies from CDN (full jQuery required by chessboard.js for animations) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+<script>
+'use strict';
+
+var ws = null;
+var dragging = false;
+var pendingPromo = null;  // { source, target } while promo modal is open
+var lastFen = 'start';    // last FEN received from server
+var quitting = false;     // set to true after Quitter confirmed
+
+// ── Board initialisation ──────────────────────────────────────────────────────
+
+// Pre-render all 12 pieces as canvas data-URIs — no external images needed.
+var PIECE_IMGS = (function () {
+  var sym = {
+    wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
+    bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
+  };
+  var out = {};
+  for (var code in sym) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 64;
+    var ctx = c.getContext('2d');
+    ctx.font = '52px "Segoe UI Symbol", "Apple Symbols", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (code[0] === 'w') {
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 3;
+      ctx.strokeText(sym[code], 32, 34);
+      ctx.fillStyle = '#fff';
+    } else {
+      ctx.strokeStyle = '#bbb';
+      ctx.lineWidth = 2;
+      ctx.strokeText(sym[code], 32, 34);
+      ctx.fillStyle = '#111';
+    }
+    ctx.fillText(sym[code], 32, 34);
+    out[code] = c.toDataURL();
+  }
+  return out;
+}());
+
+var board = Chessboard('board', {
+  position: 'start',
+  draggable: true,
+  pieceTheme: function (piece) { return PIECE_IMGS[piece]; },
+
+  onDragStart: function () {
+    dragging = true;
+  },
+
+  onDrop: function (source, target, piece) {
+    dragging = false;
+    if (source === target) return 'snapback';
+
+    if ((piece === 'wP' && target[1] === '8') ||
+        (piece === 'bP' && target[1] === '1')) {
+      showPromoModal(source, target, piece[0]);
+      return;
+    }
+
+    send({type: 'move', from: source, to: target, promotion: ''});
+  },
+
+  onSnapEnd: function () {
+    dragging = false;
+  }
+});
+
+// ── State update ──────────────────────────────────────────────────────────────
+
+function showPromoModal(source, target, color) {
+  pendingPromo = {source: source, target: target};
+  document.getElementById('pi-q').src = PIECE_IMGS[color + 'Q'];
+  document.getElementById('pi-r').src = PIECE_IMGS[color + 'R'];
+  document.getElementById('pi-b').src = PIECE_IMGS[color + 'B'];
+  document.getElementById('pi-n').src = PIECE_IMGS[color + 'N'];
+  document.getElementById('promo-modal').style.display = 'flex';
+}
+
+function choosePromo(p) {
+  if (!pendingPromo) return;
+  var mv = {type: 'move', from: pendingPromo.source, to: pendingPromo.target, promotion: p};
+  pendingPromo = null;
+  document.getElementById('promo-modal').style.display = 'none';
+  send(mv);
+}
+
+function cancelPromo() {
+  pendingPromo = null;
+  document.getElementById('promo-modal').style.display = 'none';
+  board.position(lastFen);
+}
+
+function updateState(state) {
+  lastFen = state.fen;
+  // Skip board update if user is mid-drag or waiting for promotion choice
+  if (!dragging && pendingPromo === null) {
+    board.position(state.fen);
+  }
+
+  // Version footer
+  document.getElementById('version-info').textContent =
+    '© 2025-2026 Xavier Gandillot  –  v' + state.version;
+
+  // Clocks
+  document.getElementById('white-time').textContent = fmtTime(state.whiteTime);
+  document.getElementById('black-time').textContent = fmtTime(state.blackTime);
+  document.getElementById('clock-white').classList.toggle('active',
+    !state.gameOver && state.turn === 'Blancs');
+  document.getElementById('clock-black').classList.toggle('active',
+    !state.gameOver && state.turn === 'Noirs');
+
+  // Turn info
+  var ti = document.getElementById('turn-info');
+  if (state.gameOver) {
+    ti.textContent = '── PARTIE TERMINÉE ──';
+    ti.className = 'gameover';
+  } else {
+    ti.textContent = 'Trait aux ' + state.turn +
+      '  (score : ' + fmtScore(state.score) + ')';
+    ti.className = '';
+  }
+
+  // Message
+  var msgEl = document.getElementById('message');
+  msgEl.textContent = state.message;
+  msgEl.className = state.message && (
+    state.message.indexOf('MAT') !== -1 ||
+    state.message.indexOf('illégal') !== -1 ||
+    state.message.indexOf('invalide') !== -1 ||
+    state.message.indexOf('autoplay') !== -1
+  ) ? 'err' : '';
+
+  // History
+  document.getElementById('history').textContent = state.history || '–';
+
+  // Analysis stats
+  document.getElementById('stats').innerHTML =
+    'Profondeur : <b>' + state.depth + '</b>' +
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Score : <b>' + fmtScore(state.score) + '</b>' +
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Meilleur : <b>' + state.best + '</b>' +
+    '<pre>' + escHtml(state.tableStats) + '</pre>';
+
+  // Auto button
+  document.getElementById('auto-btn').disabled = state.gameOver;
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+
+function connect() {
+  var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/ws');
+
+  ws.onopen = function () {
+    var el = document.getElementById('ws-status');
+    el.textContent = '● connecté';
+    el.className = 'ok';
+  };
+
+  ws.onmessage = function (e) {
+    try {
+      var state = JSON.parse(e.data);
+      if (state.type === 'state') updateState(state);
+    } catch (_) {}
+  };
+
+  ws.onclose = function () {
+    if (quitting) { window.close(); return; }
+    var el = document.getElementById('ws-status');
+    el.textContent = '● déconnecté';
+    el.className = '';
+    document.getElementById('auto-btn').disabled = true;
+    setTimeout(connect, 2000);
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  }
+}
+
+function sendAuto() {
+  send({type: 'auto'});
+}
+
+function sendReset() {
+  if (!confirm('Commencer une nouvelle partie ?')) return;
+  send({type: 'reset'});
+}
+
+function sendQuit() {
+  if (!confirm('Éteindre le serveur ?')) return;
+  quitting = true;
+  send({type: 'quit'});
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function fmtTime(sec) {
+  var s = Math.floor(sec);
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var r = s % 60;
+  if (h > 0) return h + ':' + pad(m) + ':' + pad(r);
+  return m + ':' + pad(r);
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function fmtScore(n) { return (n >= 0 ? '+' : '') + n; }
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+
+connect();
+</script>
+</body>
+</html>

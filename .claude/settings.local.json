@@ -13,7 +13,10 @@
       "Bash(grep -r \"func With\\\\|ProgramOption\\\\|AltScreen\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea\")",
       "Bash(grep -r \"AltScreen\\\\|altscreen\\\\|alt_screen\\\\|EnterAlt\\\\|NewView\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1\")",
       "Bash(grep -n \"AltScreen\\\\|func NewView\\\\|ViewOption\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1/view.go\")",
-      "Bash(grep -rn \"AltScreen\\\\|func NewView\\\\|type View\\\\b\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1\")"
+      "Bash(grep -rn \"AltScreen\\\\|func NewView\\\\|type View\\\\b\" \"$\\(go env GOPATH\\)/pkg/mod/charm.land/bubbletea/v2@v2.0.1\")",
+      "Bash(xargs grep *)",
+      "Bash(go get *)",
+      "Bash(go mod *)"
     ]
   }
 }
