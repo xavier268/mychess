@@ -2,7 +2,7 @@
 // However, playing level is already quite interesting ...
 package mychess
 
-const VERSION = "0.5.0"
+const VERSION = "0.5.1"
 const COPYRIGHT = "(c) 2025-2026 by Xavier Gandillot (aka xavier268)"
 
 // binary format constants for caching files identification

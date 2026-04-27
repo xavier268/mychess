@@ -367,6 +367,30 @@ func (s *Server) handleProblemExit(fen, turn string, castleWK, castleWQ, castleB
 		return
 	}
 
+	if msg := pos.Validate(); msg != "" {
+		s.mu.Lock()
+		s.message = "Position invalide : " + msg
+		s.mu.Unlock()
+		s.broadcastState()
+		return
+	}
+
+	// Both kings must be present on the board.
+	if pos.PieceAt(pos.KingPosition(position.WHITE)) != position.KING {
+		s.mu.Lock()
+		s.message = "Position invalide : roi blanc absent"
+		s.mu.Unlock()
+		s.broadcastState()
+		return
+	}
+	if pos.PieceAt(pos.KingPosition(position.BLACK)) != -position.KING {
+		s.mu.Lock()
+		s.message = "Position invalide : roi noir absent"
+		s.mu.Unlock()
+		s.broadcastState()
+		return
+	}
+
 	if turn == "b" {
 		pos.SetTurn(position.BLACK)
 	} else {

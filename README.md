@@ -422,7 +422,9 @@ Chaque entrée contient :
 | `ConfirmH` | 16 bits supérieurs du hash (détection de collision) |
 | `Age` | numéro du coup au moment du stockage (politique de remplacement) |
 
-**Politique de remplacement :** même hash → on garde l'entrée la plus profonde ; collision de hash → on remplace si l'entrée stockée est plus ancienne.
+**Politique de remplacement :** même hash → on garde l'entrée la plus profonde ; collision de hash → on remplace si l'entrée stockée est plus ancienne (`e.Age < ze.Age`).
+
+**Champ `Age` :** `Age = Game.AgeBase + len(Game.History)`. À chaque `SetPosition` (sortie du mode problème), `AgeBase` est incrémenté de `len(History) + 1`, garantissant que toutes les nouvelles entrées ont une valeur `Age` strictement supérieure à toute entrée de l'analyse précédente. Cela évite que d'anciennes entrées bloquent les nouvelles écritures dans la table.
 
 **Tailles disponibles** (via build tags) :
 
@@ -535,7 +537,8 @@ Le mode problème suspend l'analyse et permet d'éditer librement la position de
 
 À la désactivation du mode problème, le serveur :
 1. Reconstruit la `Position` depuis le FEN envoyé par le client (`ParseFEN`).
-2. Applique le trait, les droits de roque et efface le flag en passant.
-3. Recalcule le hash Zobrist complet (`DefaultZT.HashPosition`).
-4. Appelle `Game.SetPosition` : vide l'historique (remise à zéro du détecteur de répétition), incrémente `AgeBase` pour invalider les entrées obsolètes de la table de transposition, remet à zéro les stats (sans toucher au `cellCount`).
-5. Réinitialise les horloges et relance l'analyse.
+2. **Valide la position** : `pos.Validate()` vérifie que chaque bit de `colOcc` correspond à un type de pièce ; contrôle supplémentaire que chaque roi est présent sur l'échiquier. En cas d'échec, le serveur renvoie un message d'erreur et reste en mode problème.
+3. Applique le trait, les droits de roque et efface le flag en passant.
+4. Recalcule le hash Zobrist complet (`DefaultZT.HashPosition`).
+5. Appelle `Game.SetPosition` : vide l'historique (remise à zéro du détecteur de répétition), incrémente `AgeBase` de `len(History)+1` pour que les nouvelles entrées Zobrist soient toujours plus récentes que les anciennes, remet à zéro les stats de transposition (sans toucher au `cellCount`).
+6. Réinitialise les horloges et relance l'analyse.

@@ -202,6 +202,37 @@ Implémentation : `buildHistory` découpe la liste de paires en tranches de `col
 
 ---
 
+## v0.5.1 — Corrections de bugs du mode problème
+
+**Changements :** deux bugs découverts lors de l'utilisation du mode problème.
+
+### Bug 1 — Panique serveur sur position corrompue
+
+**Symptôme :** le serveur paniquait (`internal error` dans `PieceAt`) après avoir quitté le mode problème avec une position invalide — par exemple deux rois de la même couleur posés sur l'échiquier.
+
+**Cause :** `AddKing` est appelé deux fois pour le même camp quand le FEN contient deux rois noirs. Le deuxième appel écrase `status.KingStatus[BLACK]` avec la nouvelle case, mais le bit de la première case reste dans `colOcc[BLACK]`. Cette case orpheline est présente dans `colOcc` mais n'appartient à aucun bitboard de type et n'est pas la case enregistrée du roi → `PieceAt` panique.
+
+**Correctif (`server/server.go`, `handleProblemExit`) :** avant d'accepter la position, on appelle `pos.Validate()` (vérifie que chaque bit de `colOcc` a un type de pièce correspondant) et on vérifie que chaque roi est bien sur l'échiquier. En cas d'échec, le serveur renvoie un message d'erreur et reste en mode problème.
+
+### Bug 2 — Affichage figé à profondeur 0 après mode problème
+
+**Symptôme :** après avoir quitté le mode problème, le panneau d'analyse restait bloqué à profondeur 0, score 0, meilleur coup « – » indéfiniment, même si l'analyse tournait en arrière-plan.
+
+**Cause :** `SetPosition` n'incrémentait `AgeBase` que de 1. Les nouvelles entrées Zobrist obtiennent `Age = AgeBase_new = AgeBase_old + 1`. Or, les entrées de la partie précédente ont `Age = AgeBase_old + k` pour `k = 0…len(History)`. Dès que la partie avait au moins un coup (k ≥ 1), ces entrées avaient `Age ≥ AgeBase_new`, bloquant toute nouvelle écriture dans `ZMap.Set` (politique : on refuse d'écraser une entrée plus récente pour une position différente). `Z.Get(rootHash)` ne trouvait donc jamais d'entrée pour la nouvelle position → `LastRootEntry` restait `ZEntry{}` → affichage figé.
+
+**Correctif (`game/game.go`, `SetPosition`) :** incrémenter `AgeBase` de `len(History) + 1` — exactement ce qu'il faut pour que toute nouvelle entrée (`Age = AgeBase_new`) soit strictement plus récente que toute ancienne entrée (`Age ≤ AgeBase_old + len(History) = AgeBase_new − 1`).
+
+| Moment | Expression | Valeur max |
+|---|---|---|
+| Ancienne entrée | `AgeBase_old + k`, k ≤ len(H) | `AgeBase_new − 1` |
+| Nouvelle entrée | `AgeBase_new + 0` | `AgeBase_new` |
+
+La table de transposition est conservée intégralement ; seule la politique d'âge est corrigée.
+
+**Impact sur les performances :** aucune modification algorithmique — les benchmarks restent identiques à v0.4.1.
+
+---
+
 ## Synthèse
 
 ```

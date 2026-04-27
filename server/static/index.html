@@ -59,6 +59,14 @@
       gap: 14px;
     }
 
+    /* ── Board area: problem panel + board side by side ── */
+    .board-area {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
     /* ── Clocks ── */
     .clocks {
       display: flex;
@@ -162,7 +170,7 @@
       white-space: pre-wrap;
     }
 
-    /* ── Problem mode ── */
+    /* ── Problem mode toggle ── */
     .problem-toggle {
       display: flex;
       align-items: center;
@@ -173,33 +181,62 @@
     }
     .problem-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: #f0c040; }
 
+    /* ── Problem mode panel (left of board, vertical strip) ── */
     #problem-panel {
-      display: none;
+      display: none;          /* becomes flex when active */
       flex-direction: column;
-      gap: 10px;
+      gap: 14px;
       background: #16213e;
       border: 1px solid #f0c040;
       border-radius: 10px;
-      padding: 12px 16px;
-      width: 420px;
+      padding: 14px 12px;
+      width: 150px;
+      flex-shrink: 0;
     }
-    .prob-row {
+
+    .prob-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .prob-section-title {
+      color: #f0c040;
+      font-size: 0.70rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid #2a3a5e;
+      padding-bottom: 4px;
+    }
+    .prob-section label {
       display: flex;
       align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      font-size: 0.88rem;
+      gap: 6px;
+      font-size: 0.86rem;
+      cursor: pointer;
     }
-    .prob-row > span { color: #f0c040; font-weight: 600; min-width: 54px; }
-    .prob-row label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
-    .prob-row input[type="radio"], .prob-row input[type="checkbox"] {
-      accent-color: #f0c040; cursor: pointer;
+    .prob-section input[type="radio"],
+    .prob-section input[type="checkbox"] {
+      accent-color: #f0c040;
+      cursor: pointer;
+      flex-shrink: 0;
     }
-    .prob-hint { color: #888; font-size: 0.78rem; }
 
-    #copy-mode-btn { background: #444; width: auto; padding: 7px 14px; font-size: 0.85rem; }
+    #copy-mode-btn {
+      background: #444;
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 0.82rem;
+      border-radius: 6px;
+    }
     #copy-mode-btn:hover:not(:disabled) { background: #555; }
     #copy-mode-btn.active { background: #b36a00; }
+
+    .prob-hint {
+      color: #666;
+      font-size: 0.72rem;
+      line-height: 1.5;
+    }
 
     /* ── Promotion modal ── */
     .promo-overlay {
@@ -276,7 +313,34 @@
       <div class="clock" id="clock-black">&#x265A; Noirs &nbsp;<span id="black-time">0:00</span></div>
     </div>
 
-    <div id="board"></div>
+    <!-- Problem panel sits LEFT of the board inside this row wrapper -->
+    <div class="board-area">
+
+      <!-- Problem mode editor panel (hidden by default) -->
+      <div id="problem-panel">
+        <div class="prob-section">
+          <span class="prob-section-title">Trait</span>
+          <label><input type="radio" name="prob-turn" value="w" checked> Blancs</label>
+          <label><input type="radio" name="prob-turn" value="b"> Noirs</label>
+        </div>
+
+        <div class="prob-section">
+          <span class="prob-section-title">Roque</span>
+          <label><input type="checkbox" id="castle-wk" checked> &#x2654;&nbsp;Petit</label>
+          <label><input type="checkbox" id="castle-wq" checked> &#x2654;&nbsp;Grand</label>
+          <label><input type="checkbox" id="castle-bk" checked> &#x265A;&nbsp;Petit</label>
+          <label><input type="checkbox" id="castle-bq" checked> &#x265A;&nbsp;Grand</label>
+        </div>
+
+        <div class="prob-section">
+          <span class="prob-section-title">Edition</span>
+          <button id="copy-mode-btn" onclick="toggleCopyMode()">Copie&nbsp;: OFF</button>
+          <span class="prob-hint">Drag&nbsp;: d&eacute;placer<br>Copie ON&nbsp;: dupliquer<br>Hors &eacute;ch.&nbsp;: supprimer</span>
+        </div>
+      </div>
+
+      <div id="board"></div>
+    </div>
 
     <div class="controls">
       <button id="auto-btn"   onclick="sendAuto()"  disabled>Auto</button>
@@ -288,26 +352,6 @@
       <input type="checkbox" id="problem-check" onchange="onProblemCheck()">
       Mode Probl&egrave;me
     </label>
-
-    <!-- Problem mode editor panel -->
-    <div id="problem-panel">
-      <div class="prob-row">
-        <span>Trait&nbsp;:</span>
-        <label><input type="radio" name="prob-turn" value="w" checked> Blancs</label>
-        <label><input type="radio" name="prob-turn" value="b"> Noirs</label>
-      </div>
-      <div class="prob-row">
-        <span>Roque&nbsp;:</span>
-        <label><input type="checkbox" id="castle-wk" checked> &#x2654;&nbsp;Petit</label>
-        <label><input type="checkbox" id="castle-wq" checked> &#x2654;&nbsp;Grand</label>
-        <label><input type="checkbox" id="castle-bk" checked> &#x265A;&nbsp;Petit</label>
-        <label><input type="checkbox" id="castle-bq" checked> &#x265A;&nbsp;Grand</label>
-      </div>
-      <div class="prob-row">
-        <button id="copy-mode-btn" onclick="toggleCopyMode()">Mode copie&nbsp;: OFF</button>
-        <span class="prob-hint">Drag&nbsp;: d&eacute;placer &mdash; copie ON&nbsp;: dupliquer &mdash; hors &eacute;chiquier&nbsp;: supprimer</span>
-      </div>
-    </div>
 
     <div id="turn-info">Connexion&hellip;</div>
     <div id="message"></div>
@@ -459,10 +503,11 @@ function enterProblemMode(state) {
   document.getElementById('castle-wq').checked = !!state.castleWQ;
   document.getElementById('castle-bk').checked = !!state.castleBK;
   document.getElementById('castle-bq').checked = !!state.castleBQ;
-  // Recreate board with spare pieces using current server position
-  makeBoard(state.fen, true);
+  // Show panel (flex makes it appear as a column to the left of the board)
   document.getElementById('problem-panel').style.display = 'flex';
   document.getElementById('problem-check').checked = true;
+  // Recreate board with spare pieces using current server position
+  makeBoard(state.fen, true);
 }
 
 function leaveProblemModeUI() {
@@ -470,7 +515,7 @@ function leaveProblemModeUI() {
   copyMode = false;
   copyPending = null;
   var btn = document.getElementById('copy-mode-btn');
-  btn.textContent = 'Mode copie : OFF';
+  btn.textContent = 'Copie : OFF';
   btn.classList.remove('active');
   document.getElementById('problem-panel').style.display = 'none';
   document.getElementById('problem-check').checked = false;
@@ -504,7 +549,7 @@ function toggleCopyMode() {
   copyMode = !copyMode;
   copyPending = null;
   var btn = document.getElementById('copy-mode-btn');
-  btn.textContent = copyMode ? 'Mode copie : ON' : 'Mode copie : OFF';
+  btn.textContent = copyMode ? 'Copie : ON' : 'Copie : OFF';
   btn.classList.toggle('active', copyMode);
 }
 
@@ -596,7 +641,7 @@ function updateState(state) {
     ti.className = 'gameover';
   } else {
     ti.textContent = 'Trait aux ' + state.turn +
-      '  (score : ' + fmtScore(state.score) + ')';
+      '  (score : ' + fmtScore(state.score) + ')';
     ti.className = '';
   }
 
@@ -604,8 +649,8 @@ function updateState(state) {
   var msgEl = document.getElementById('message');
   msgEl.textContent = state.message;
   msgEl.className = state.message && (
-    state.message.indexOf('MAT')     !== -1 ||
-    state.message.indexOf('illégal') !== -1 ||
+    state.message.indexOf('MAT')      !== -1 ||
+    state.message.indexOf('illégal')  !== -1 ||
     state.message.indexOf('invalide') !== -1 ||
     state.message.indexOf('autoplay') !== -1
   ) ? 'err' : '';
@@ -615,9 +660,9 @@ function updateState(state) {
 
   // Analysis stats
   document.getElementById('stats').innerHTML =
-    'Profondeur : <b>' + state.depth + '</b>' +
-    '&nbsp;&nbsp;|&nbsp;&nbsp;Score : <b>' + fmtScore(state.score) + '</b>' +
-    '&nbsp;&nbsp;|&nbsp;&nbsp;Meilleur : <b>' + state.best + '</b>' +
+    'Profondeur : <b>' + state.depth + '</b>' +
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Score : <b>' + fmtScore(state.score) + '</b>' +
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Meilleur : <b>' + state.best + '</b>' +
     '<pre>' + escHtml(state.tableStats) + '</pre>';
 
   // Buttons
@@ -663,12 +708,12 @@ function send(msg) {
 function sendAuto()  { send({type: 'auto'}); }
 
 function sendReset() {
-  if (!confirm('Commencer une nouvelle partie ?')) return;
+  if (!confirm('Commencer une nouvelle partie ?')) return;
   send({type: 'reset'});
 }
 
 function sendQuit() {
-  if (!confirm('Éteindre le serveur ?')) return;
+  if (!confirm('Éteindre le serveur ?')) return;
   quitting = true;
   send({type: 'quit'});
 }

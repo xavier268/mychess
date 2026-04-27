@@ -174,9 +174,12 @@ func (g *Game) SetPosition(pos position.Position) {
 	defer g.mu.Unlock()
 
 	g.Position = pos
+	// Bump AgeBase enough that new entries (Age = AgeBase_new) are always
+	// newer than every old entry (Age <= AgeBase_old + len(History)).
+	// A bump of 1 is insufficient when the previous game had any moves.
+	g.AgeBase += uint16(len(g.History)) + 1
 	g.History = make([]position.Move, 0, 100)
 	g.LastRootEntry = ZEntry{}
-	g.AgeBase++
 	g.Z.ResetStats()
 }
 
