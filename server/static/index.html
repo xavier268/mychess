@@ -162,6 +162,45 @@
       white-space: pre-wrap;
     }
 
+    /* ── Problem mode ── */
+    .problem-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .problem-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: #f0c040; }
+
+    #problem-panel {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      background: #16213e;
+      border: 1px solid #f0c040;
+      border-radius: 10px;
+      padding: 12px 16px;
+      width: 420px;
+    }
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+    }
+    .prob-row > span { color: #f0c040; font-weight: 600; min-width: 54px; }
+    .prob-row label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .prob-row input[type="radio"], .prob-row input[type="checkbox"] {
+      accent-color: #f0c040; cursor: pointer;
+    }
+    .prob-hint { color: #888; font-size: 0.78rem; }
+
+    #copy-mode-btn { background: #444; width: auto; padding: 7px 14px; font-size: 0.85rem; }
+    #copy-mode-btn:hover:not(:disabled) { background: #555; }
+    #copy-mode-btn.active { background: #b36a00; }
+
     /* ── Promotion modal ── */
     .promo-overlay {
       display: none;
@@ -221,11 +260,11 @@
 </head>
 <body>
 
-<div id="ws-status">⬤ déconnecté</div>
+<div id="ws-status">&#x2B24; d&eacute;connect&eacute;</div>
 
 <header>
-  <h1>♟ MyChess</h1>
-  <p id="version-info">chargement…</p>
+  <h1>&#x265F; MyChess</h1>
+  <p id="version-info">chargement&hellip;</p>
 </header>
 
 <div class="layout">
@@ -233,8 +272,8 @@
   <!-- ── Left column ── -->
   <div class="left">
     <div class="clocks">
-      <div class="clock" id="clock-white">♔ Blancs &nbsp;<span id="white-time">0:00</span></div>
-      <div class="clock" id="clock-black">♚ Noirs &nbsp;<span id="black-time">0:00</span></div>
+      <div class="clock" id="clock-white">&#x2654; Blancs &nbsp;<span id="white-time">0:00</span></div>
+      <div class="clock" id="clock-black">&#x265A; Noirs &nbsp;<span id="black-time">0:00</span></div>
     </div>
 
     <div id="board"></div>
@@ -245,7 +284,32 @@
       <button id="quit-btn"   onclick="sendQuit()">Quitter</button>
     </div>
 
-    <div id="turn-info">Connexion…</div>
+    <label class="problem-toggle">
+      <input type="checkbox" id="problem-check" onchange="onProblemCheck()">
+      Mode Probl&egrave;me
+    </label>
+
+    <!-- Problem mode editor panel -->
+    <div id="problem-panel">
+      <div class="prob-row">
+        <span>Trait&nbsp;:</span>
+        <label><input type="radio" name="prob-turn" value="w" checked> Blancs</label>
+        <label><input type="radio" name="prob-turn" value="b"> Noirs</label>
+      </div>
+      <div class="prob-row">
+        <span>Roque&nbsp;:</span>
+        <label><input type="checkbox" id="castle-wk" checked> &#x2654;&nbsp;Petit</label>
+        <label><input type="checkbox" id="castle-wq" checked> &#x2654;&nbsp;Grand</label>
+        <label><input type="checkbox" id="castle-bk" checked> &#x265A;&nbsp;Petit</label>
+        <label><input type="checkbox" id="castle-bq" checked> &#x265A;&nbsp;Grand</label>
+      </div>
+      <div class="prob-row">
+        <button id="copy-mode-btn" onclick="toggleCopyMode()">Mode copie&nbsp;: OFF</button>
+        <span class="prob-hint">Drag&nbsp;: d&eacute;placer &mdash; copie ON&nbsp;: dupliquer &mdash; hors &eacute;chiquier&nbsp;: supprimer</span>
+      </div>
+    </div>
+
+    <div id="turn-info">Connexion&hellip;</div>
     <div id="message"></div>
   </div>
 
@@ -253,11 +317,11 @@
   <div class="right">
     <div class="panel">
       <h3>Historique</h3>
-      <pre id="history">–</pre>
+      <pre id="history">&ndash;</pre>
     </div>
     <div class="panel">
       <h3>Analyse</h3>
-      <div id="stats">–</div>
+      <div id="stats">&ndash;</div>
     </div>
   </div>
 
@@ -266,7 +330,7 @@
 <!-- Promotion modal -->
 <div id="promo-modal" class="promo-overlay">
   <div class="promo-box">
-    <h3>Promotion — choisir la pièce</h3>
+    <h3>Promotion &mdash; choisir la pi&egrave;ce</h3>
     <div class="promo-choices">
       <button class="promo-piece" onclick="choosePromo('q')"><img id="pi-q" src="" alt=""><span>Dame</span></button>
       <button class="promo-piece" onclick="choosePromo('r')"><img id="pi-r" src="" alt=""><span>Tour</span></button>
@@ -286,20 +350,24 @@
 
 var ws = null;
 var dragging = false;
-var pendingPromo = null;  // { source, target } while promo modal is open
-var lastFen = 'start';    // last FEN received from server
-var quitting = false;     // set to true after Quitter confirmed
+var pendingPromo = null;   // { source, target } while promo modal is open
+var lastFen = 'start';     // last FEN received from server
+var quitting = false;      // set to true after Quitter confirmed
+var problemMode = false;   // true when server is in problem-editing mode
+var copyMode = false;      // true when copy-mode button is active
+var copyPending = null;    // { sq, piece } to restore after snap, in copy mode
 
-// ── Board initialisation ──────────────────────────────────────────────────────
+// ── Piece images ──────────────────────────────────────────────────────────────
 
-// Pre-render all 12 pieces as canvas data-URIs — no external images needed.
+var PIECE_SYMS = {
+  wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
+  bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
+};
+
 var PIECE_IMGS = (function () {
-  var sym = {
-    wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
-    bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
-  };
   var out = {};
-  for (var code in sym) {
+  for (var code in PIECE_SYMS) {
+    var sym = PIECE_SYMS[code];
     var c = document.createElement('canvas');
     c.width = c.height = 64;
     var ctx = c.getContext('2d');
@@ -309,48 +377,162 @@ var PIECE_IMGS = (function () {
     if (code[0] === 'w') {
       ctx.strokeStyle = '#444';
       ctx.lineWidth = 3;
-      ctx.strokeText(sym[code], 32, 34);
+      ctx.strokeText(sym, 32, 34);
       ctx.fillStyle = '#fff';
     } else {
       ctx.strokeStyle = '#bbb';
       ctx.lineWidth = 2;
-      ctx.strokeText(sym[code], 32, 34);
+      ctx.strokeText(sym, 32, 34);
       ctx.fillStyle = '#111';
     }
-    ctx.fillText(sym[code], 32, 34);
+    ctx.fillText(sym, 32, 34);
     out[code] = c.toDataURL();
   }
   return out;
 }());
 
-var board = Chessboard('board', {
-  position: 'start',
-  draggable: true,
-  pieceTheme: function (piece) { return PIECE_IMGS[piece]; },
+// ── Normal drag-drop handlers ─────────────────────────────────────────────────
 
-  onDragStart: function () {
-    dragging = true;
-  },
-
-  onDrop: function (source, target, piece) {
-    dragging = false;
-    if (source === target) return 'snapback';
-
-    if ((piece === 'wP' && target[1] === '8') ||
-        (piece === 'bP' && target[1] === '1')) {
-      showPromoModal(source, target, piece[0]);
-      return;
-    }
-
-    send({type: 'move', from: source, to: target, promotion: ''});
-  },
-
-  onSnapEnd: function () {
-    dragging = false;
+function normalOnDrop(source, target, piece) {
+  dragging = false;
+  if (source === target) return 'snapback';
+  if ((piece === 'wP' && target[1] === '8') ||
+      (piece === 'bP' && target[1] === '1')) {
+    showPromoModal(source, target, piece[0]);
+    return;
   }
-});
+  send({type: 'move', from: source, to: target, promotion: ''});
+}
 
-// ── State update ──────────────────────────────────────────────────────────────
+// ── Problem mode drag-drop handlers ──────────────────────────────────────────
+
+function problemOnDrop(source, target, piece) {
+  dragging = false;
+  if (source === target) return 'snapback';
+  // Drop off board: delete the piece
+  if (target === 'offboard') return 'trash';
+  // Spare piece onto board: chessboard.js places it; spare stays (sparePieces behaviour)
+  if (source === 'spare') return;
+  // Board-to-board in copy mode: schedule source restoration after snap
+  if (copyMode) copyPending = {sq: source, piece: piece};
+}
+
+function problemSnapEnd() {
+  dragging = false;
+  if (copyPending) {
+    var pos = board.position();
+    pos[copyPending.sq] = copyPending.piece;
+    board.position(pos, false);
+    copyPending = null;
+  }
+}
+
+// ── Board factory ─────────────────────────────────────────────────────────────
+
+var board;
+
+function makeBoard(pos, withSpare) {
+  if (board) board.destroy();
+  var cfg = {
+    position: pos || 'start',
+    draggable: true,
+    pieceTheme: function(p) { return PIECE_IMGS[p]; },
+    onDragStart: function() { dragging = true; },
+    onSnapEnd: withSpare ? problemSnapEnd : function() { dragging = false; },
+    onDrop:    withSpare ? problemOnDrop  : normalOnDrop
+  };
+  if (withSpare) cfg.sparePieces = true;
+  board = Chessboard('board', cfg);
+}
+
+makeBoard('start', false);
+
+// ── Problem mode enter / exit ─────────────────────────────────────────────────
+
+function enterProblemMode(state) {
+  problemMode = true;
+  // Pre-fill turn
+  var turnVal = (state.turn === 'Noirs') ? 'b' : 'w';
+  document.querySelector('input[name="prob-turn"][value="' + turnVal + '"]').checked = true;
+  // Pre-fill castle rights
+  document.getElementById('castle-wk').checked = !!state.castleWK;
+  document.getElementById('castle-wq').checked = !!state.castleWQ;
+  document.getElementById('castle-bk').checked = !!state.castleBK;
+  document.getElementById('castle-bq').checked = !!state.castleBQ;
+  // Recreate board with spare pieces using current server position
+  makeBoard(state.fen, true);
+  document.getElementById('problem-panel').style.display = 'flex';
+  document.getElementById('problem-check').checked = true;
+}
+
+function leaveProblemModeUI() {
+  problemMode = false;
+  copyMode = false;
+  copyPending = null;
+  var btn = document.getElementById('copy-mode-btn');
+  btn.textContent = 'Mode copie : OFF';
+  btn.classList.remove('active');
+  document.getElementById('problem-panel').style.display = 'none';
+  document.getElementById('problem-check').checked = false;
+  makeBoard(lastFen, false);
+}
+
+function onProblemCheck() {
+  var checked = document.getElementById('problem-check').checked;
+  if (checked) {
+    // Tell server to enter problem mode; it will reply with problemMode=true
+    send({type: 'problem_enter'});
+  } else {
+    // Collect current board state and send to server
+    var pos  = board.position();
+    var fen  = boardToFen(pos);
+    var turn = document.querySelector('input[name="prob-turn"]:checked').value;
+    send({
+      type:         'problem_exit',
+      fen:          fen,
+      turn:         turn,
+      castleWhiteK: document.getElementById('castle-wk').checked,
+      castleWhiteQ: document.getElementById('castle-wq').checked,
+      castleBlackK: document.getElementById('castle-bk').checked,
+      castleBlackQ: document.getElementById('castle-bq').checked
+    });
+    leaveProblemModeUI();
+  }
+}
+
+function toggleCopyMode() {
+  copyMode = !copyMode;
+  copyPending = null;
+  var btn = document.getElementById('copy-mode-btn');
+  btn.textContent = copyMode ? 'Mode copie : ON' : 'Mode copie : OFF';
+  btn.classList.toggle('active', copyMode);
+}
+
+// ── FEN helper ────────────────────────────────────────────────────────────────
+
+function boardToFen(pos) {
+  var ranks = [];
+  for (var r = 8; r >= 1; r--) {
+    var s = '';
+    var empty = 0;
+    for (var f = 0; f < 8; f++) {
+      var sq = String.fromCharCode(97 + f) + r;
+      var p = pos[sq];
+      if (!p) {
+        empty++;
+      } else {
+        if (empty > 0) { s += empty; empty = 0; }
+        var ch = p[1]; // piece letter: K/Q/R/B/N/P
+        s += (p[0] === 'w') ? ch.toUpperCase() : ch.toLowerCase();
+      }
+    }
+    if (empty > 0) s += empty;
+    ranks.push(s);
+  }
+  return ranks.join('/');
+}
+
+// ── Promotion modal ───────────────────────────────────────────────────────────
 
 function showPromoModal(source, target, color) {
   pendingPromo = {source: source, target: target};
@@ -375,10 +557,20 @@ function cancelPromo() {
   board.position(lastFen);
 }
 
+// ── State update ──────────────────────────────────────────────────────────────
+
 function updateState(state) {
   lastFen = state.fen;
-  // Skip board update if user is mid-drag or waiting for promotion choice
-  if (!dragging && pendingPromo === null) {
+
+  // Handle problem mode transitions driven by server state
+  if (state.problemMode && !problemMode) {
+    enterProblemMode(state);
+  } else if (!state.problemMode && problemMode) {
+    leaveProblemModeUI();
+  }
+
+  // Update board position only in normal mode (problem mode manages its own board)
+  if (!problemMode && !dragging && pendingPromo === null) {
     board.position(state.fen);
   }
 
@@ -386,17 +578,20 @@ function updateState(state) {
   document.getElementById('version-info').textContent =
     '© 2025-2026 Xavier Gandillot  –  v' + state.version;
 
-  // Clocks
+  // Clocks (frozen in problem mode)
   document.getElementById('white-time').textContent = fmtTime(state.whiteTime);
   document.getElementById('black-time').textContent = fmtTime(state.blackTime);
   document.getElementById('clock-white').classList.toggle('active',
-    !state.gameOver && state.turn === 'Blancs');
+    !state.gameOver && !state.problemMode && state.turn === 'Blancs');
   document.getElementById('clock-black').classList.toggle('active',
-    !state.gameOver && state.turn === 'Noirs');
+    !state.gameOver && !state.problemMode && state.turn === 'Noirs');
 
   // Turn info
   var ti = document.getElementById('turn-info');
-  if (state.gameOver) {
+  if (state.problemMode) {
+    ti.textContent = '── MODE PROBLÈME ──';
+    ti.className = 'gameover';
+  } else if (state.gameOver) {
     ti.textContent = '── PARTIE TERMINÉE ──';
     ti.className = 'gameover';
   } else {
@@ -409,7 +604,7 @@ function updateState(state) {
   var msgEl = document.getElementById('message');
   msgEl.textContent = state.message;
   msgEl.className = state.message && (
-    state.message.indexOf('MAT') !== -1 ||
+    state.message.indexOf('MAT')     !== -1 ||
     state.message.indexOf('illégal') !== -1 ||
     state.message.indexOf('invalide') !== -1 ||
     state.message.indexOf('autoplay') !== -1
@@ -425,8 +620,9 @@ function updateState(state) {
     '&nbsp;&nbsp;|&nbsp;&nbsp;Meilleur : <b>' + state.best + '</b>' +
     '<pre>' + escHtml(state.tableStats) + '</pre>';
 
-  // Auto button
-  document.getElementById('auto-btn').disabled = state.gameOver;
+  // Buttons
+  document.getElementById('auto-btn').disabled  = state.gameOver || state.problemMode;
+  document.getElementById('reset-btn').disabled = state.problemMode;
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
@@ -464,17 +660,15 @@ function send(msg) {
   }
 }
 
-function sendAuto() {
-  send({type: 'auto'});
-}
+function sendAuto()  { send({type: 'auto'}); }
 
 function sendReset() {
-  if (!confirm('Commencer une nouvelle partie ?')) return;
+  if (!confirm('Commencer une nouvelle partie ?')) return;
   send({type: 'reset'});
 }
 
 function sendQuit() {
-  if (!confirm('Éteindre le serveur ?')) return;
+  if (!confirm('Éteindre le serveur ?')) return;
   quitting = true;
   send({type: 'quit'});
 }
@@ -491,9 +685,7 @@ function fmtTime(sec) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
-
 function fmtScore(n) { return (n >= 0 ? '+' : '') + n; }
-
 function escHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')

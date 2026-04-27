@@ -178,6 +178,30 @@ Implémentation : `buildHistory` découpe la liste de paires en tranches de `col
 
 ---
 
+## v0.5.0 — Serveur HTTP/WebSocket et client web
+
+**Changements :**
+
+1. **Nouveau package `server`** : serveur HTTP avec hub WebSocket (gorilla/websocket). Plusieurs clients peuvent se connecter simultanément ; chacun reçoit l'état courant à la connexion, puis des mises à jour toutes les 500 ms via un `tickerLoop`. Protocole JSON bidirectionnel : messages entrants (`move`, `auto`, `reset`, `quit`, `problem_enter`, `problem_exit`) et message sortant unique (`StateMsg`).
+
+2. **Client web embarqué** (`server/static/index.html`, servi via `go:embed`) : échiquier interactif basé sur chessboard.js, rendu des pièces par canvas (pas d'images externes), horloges par joueur, historique des coups, panneau d'analyse (profondeur, score, meilleur coup, stats de transposition), modal de promotion.
+
+3. **Mode Problème** (`problem_enter` / `problem_exit`) : interrompt l'analyse et déverrouille l'édition de position directement depuis l'interface web.
+   - Palette de pièces spare (chessboard.js `sparePieces: true`) pour poser n'importe quelle pièce sans qu'elle disparaisse.
+   - Déplacement libre de pièces (aucune validation de légalité).
+   - **Mode copie** (bouton-bascule) : la pièce source est restaurée après le dépôt, permettant la duplication.
+   - Suppression par glisser hors de l'échiquier.
+   - Sélection du trait (Blancs/Noirs) et des quatre droits de roque individuels.
+   - À la désactivation : `ParseFEN` reconstruit la `Position`, le hash Zobrist est recalculé depuis zéro (`DefaultZT.HashPosition`), l'historique est vidé (remise à zéro du détecteur de répétition), `AgeBase` est incrémenté, les stats de transposition sont remises à zéro, les horloges sont réinitialisées, l'analyse repart.
+
+4. **Nouvelles primitives** (package `position`) : `ParseFEN`, `SetTurn`, `CastleBits` — exposent les opérations internes nécessaires à l'édition de position depuis l'extérieur du package.
+
+5. **`Game.SetPosition` + `AgeBase`** (package `game`) : méthode atomique d'injection d'une position éditée. `AgeBase` garantit que les nouvelles entrées Zobrist (`Age = AgeBase + len(History)`) sont toujours considérées comme plus récentes que celles de l'analyse précédente, évitant les blocages de remplacement dans la `ZMap`.
+
+**Impact sur les performances :** aucun changement algorithmique — les benchmarks restent identiques à v0.4.1.
+
+---
+
 ## Synthèse
 
 ```

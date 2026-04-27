@@ -1,5 +1,7 @@
 package position
 
+import "fmt"
+
 // Utilities to create/modify specific positions
 // Positions are specified as strings : a1 or C4 ...
 
@@ -80,4 +82,67 @@ func (p *Position) SetCastle(side uint8, castleBits uint8) *Position {
 	side = side & 1
 	p.status.KingStatus[side] |= (castleBits & CanCastle)
 	return p
+}
+
+// SetTurn sets whose turn it is (WHITE or BLACK).
+func (p *Position) SetTurn(turn uint8) {
+	p.status.SetTurn(turn)
+}
+
+// ParseFEN parses the piece-placement section of a FEN string and returns a
+// Position with the pieces placed. Hash, turn, castling rights, and en passant
+// are all zero/cleared; the caller must set them and call
+// DefaultZT.HashPosition to obtain a consistent hash.
+// Returns an error if the FEN contains an unrecognised character.
+func ParseFEN(fen string) (Position, error) {
+	var p Position
+	rank := 7
+	file := 0
+	for _, ch := range fen {
+		switch {
+		case ch == '/':
+			rank--
+			file = 0
+			if rank < 0 {
+				return Position{}, fmt.Errorf("ParseFEN: too many ranks in %q", fen)
+			}
+		case ch >= '1' && ch <= '8':
+			file += int(ch - '0')
+		default:
+			if file > 7 || rank < 0 {
+				return Position{}, fmt.Errorf("ParseFEN: square out of range at %c", ch)
+			}
+			sq := Sq(rank, file)
+			switch ch {
+			case 'P':
+				p.AddPawn(WHITE, sq.String())
+			case 'N':
+				p.AddKnight(WHITE, sq.String())
+			case 'B':
+				p.AddBishop(WHITE, sq.String())
+			case 'R':
+				p.AddRook(WHITE, sq.String())
+			case 'Q':
+				p.AddQueen(WHITE, sq.String())
+			case 'K':
+				p.AddKing(WHITE, sq.String())
+			case 'p':
+				p.AddPawn(BLACK, sq.String())
+			case 'n':
+				p.AddKnight(BLACK, sq.String())
+			case 'b':
+				p.AddBishop(BLACK, sq.String())
+			case 'r':
+				p.AddRook(BLACK, sq.String())
+			case 'q':
+				p.AddQueen(BLACK, sq.String())
+			case 'k':
+				p.AddKing(BLACK, sq.String())
+			default:
+				return Position{}, fmt.Errorf("ParseFEN: unknown character %q", ch)
+			}
+			file++
+		}
+	}
+	return p, nil
 }

@@ -135,7 +135,7 @@ func (g *Game) AlphaBeta(ctx context.Context, alpha, beta position.Score, depth 
 		Score: bestScore,
 		Best:  bestMove,
 		Depth: depth,
-		Age:   uint16(len(g.History)),
+		Age:   g.AgeBase + uint16(len(g.History)),
 	}
 	if bestScore <= oldAlpha {
 		newEntry.ScoreType = UPPER

@@ -14,6 +14,7 @@ game/       — recherche alpha-bêta, table de transposition, boucle d'analyse
 cache/      — génération et lecture des fichiers de cache pré-calculés
 gencache/   — commande standalone pour pré-calculer un cache sur disque
 client/     — interface textuelle (TUI)
+server/     — serveur HTTP/WebSocket avec client web embarqué
 ```
 
 ---
@@ -498,3 +499,43 @@ Au démarrage, le client affiche `Memory model : <N>M, loading ...` pendant le c
 ### Historique en colonnes multiples
 
 L'historique est affiché en **colonnes de 20 paires de coups**. Lorsque la partie dépasse 20 paires, une nouvelle colonne apparaît à droite ; le nombre de lignes à l'écran ne change jamais, quelle que soit la longueur de la partie. Tous les coups restent toujours visibles — aucune troncature.
+
+---
+
+## Package `server` — Interface web
+
+Serveur HTTP avec hub WebSocket (gorilla/websocket). Le client web est embarqué dans le binaire via `go:embed`.
+
+### Protocole WebSocket
+
+**Entrant (client → serveur) :**
+
+| Type | Champs | Action |
+|---|---|---|
+| `move` | `from`, `to`, `promotion` | Jouer un coup (validé légalement) |
+| `auto` | — | Jouer le meilleur coup de la table de transposition |
+| `reset` | — | Nouvelle partie (recharge le cache) |
+| `quit` | — | Arrêter le serveur |
+| `problem_enter` | — | Entrer en mode problème |
+| `problem_exit` | `fen`, `turn`, `castleWhiteK/Q`, `castleBlackK/Q` | Valider la position éditée |
+
+**Sortant (serveur → clients, JSON) :**
+
+Unique type `StateMsg` diffusé à tous les clients connectés, contenant : FEN, trait, score, historique, profondeur, meilleur coup, stats transposition, horloges, fin de partie, message, version, mode problème, droits de roque.
+
+### Mode Problème
+
+Le mode problème suspend l'analyse et permet d'éditer librement la position depuis le navigateur :
+
+- **Palette de pièces** (chessboard.js `sparePieces: true`) : les pièces de la palette peuvent être posées sur l'échiquier sans limite et sans disparaître.
+- **Déplacement libre** : aucune validation de légalité.
+- **Mode copie** (bouton-bascule) : maintient la pièce source à sa case d'origine après le dépôt, permettant la duplication.
+- **Suppression** : faire glisser une pièce hors de l'échiquier la supprime.
+- **Trait et droits de roque** : sélectionnables via boutons radio et cases à cocher.
+
+À la désactivation du mode problème, le serveur :
+1. Reconstruit la `Position` depuis le FEN envoyé par le client (`ParseFEN`).
+2. Applique le trait, les droits de roque et efface le flag en passant.
+3. Recalcule le hash Zobrist complet (`DefaultZT.HashPosition`).
+4. Appelle `Game.SetPosition` : vide l'historique (remise à zéro du détecteur de répétition), incrémente `AgeBase` pour invalider les entrées obsolètes de la table de transposition, remet à zéro les stats (sans toucher au `cellCount`).
+5. Réinitialise les horloges et relance l'analyse.

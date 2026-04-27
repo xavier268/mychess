@@ -49,6 +49,12 @@ func (p Position) Turn() uint8 {
 	return p.status.GetTurn()
 }
 
+// CastleBits retourne le masque des droits de roque pour le camp donné.
+// Testez avec position.CanCastleKingSide et position.CanCastleQueenSide.
+func (p Position) CastleBits(side uint8) uint8 {
+	return p.status.GetCastleBits(side)
+}
+
 // KingPosition retourne la case du roi du camp `side` (WHITE ou BLACK).
 func (p Position) KingPosition(side uint8) Square {
 	return p.status.GetKingPosition(side)

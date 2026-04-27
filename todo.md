@@ -6,3 +6,6 @@ Evaluation de la valeur intrinseque de la position :
    * en milieu de partie, prime au nombre de cases accessibles des tours, cavaliers, fous et reine, prime aux pions passés
    * en fin de partie : prime/pénalité au nombre de cases accessibles au roi
 
+Interface browser :
+ * ~~ajouter un mode "problème" (case à cocher).~~ DONE v0.5.0
+

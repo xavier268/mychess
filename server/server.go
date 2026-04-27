@@ -82,14 +82,15 @@ type Server struct {
 
 	moveMu sync.Mutex // serialises move, reset, and shutdown operations
 
-	mu         sync.Mutex // protects display state and s.g pointer below
-	displayPos position.Position
-	historyStr string
-	whiteTime  time.Duration
-	blackTime  time.Duration
-	turnStart  time.Time
-	gameOver   bool
-	message    string
+	mu          sync.Mutex // protects display state and s.g pointer below
+	displayPos  position.Position
+	historyStr  string
+	whiteTime   time.Duration
+	blackTime   time.Duration
+	turnStart   time.Time
+	gameOver    bool
+	message     string
+	problemMode bool
 }
 
 func newServer() *Server {
@@ -156,10 +157,16 @@ func (s *Server) readPump(c *wsClient) {
 			return
 		}
 		var msg struct {
-			Type      string `json:"type"`
-			From      string `json:"from"`
-			To        string `json:"to"`
-			Promotion string `json:"promotion"`
+			Type         string `json:"type"`
+			From         string `json:"from"`
+			To           string `json:"to"`
+			Promotion    string `json:"promotion"`
+			Fen          string `json:"fen"`
+			Turn         string `json:"turn"`
+			CastleWhiteK bool   `json:"castleWhiteK"`
+			CastleWhiteQ bool   `json:"castleWhiteQ"`
+			CastleBlackK bool   `json:"castleBlackK"`
+			CastleBlackQ bool   `json:"castleBlackQ"`
 		}
 		if json.Unmarshal(raw, &msg) != nil {
 			continue
@@ -173,6 +180,10 @@ func (s *Server) readPump(c *wsClient) {
 			s.handleReset()
 		case "quit":
 			s.handleShutdown()
+		case "problem_enter":
+			s.handleProblemEnter()
+		case "problem_exit":
+			s.handleProblemExit(msg.Fen, msg.Turn, msg.CastleWhiteK, msg.CastleWhiteQ, msg.CastleBlackK, msg.CastleBlackQ)
 		}
 	}
 }
@@ -184,7 +195,7 @@ func (s *Server) handleMove(from, to, promo string) {
 	defer s.moveMu.Unlock()
 
 	s.mu.Lock()
-	if s.gameOver {
+	if s.gameOver || s.problemMode {
 		s.mu.Unlock()
 		return
 	}
@@ -235,7 +246,7 @@ func (s *Server) handleAuto() {
 	defer s.moveMu.Unlock()
 
 	s.mu.Lock()
-	if s.gameOver {
+	if s.gameOver || s.problemMode {
 		s.mu.Unlock()
 		return
 	}
@@ -325,6 +336,78 @@ func (s *Server) handleShutdown() {
 	}()
 }
 
+// ── Problem Mode ─────────────────────────────────────────────────────────────
+
+func (s *Server) handleProblemEnter() {
+	s.moveMu.Lock()
+	defer s.moveMu.Unlock()
+
+	// Stop any running analysis immediately.
+	stopCtx, stopCancel := context.WithCancel(context.Background())
+	stopCancel()
+	s.g.AnalysisAsync(stopCtx, 1)
+
+	s.mu.Lock()
+	s.problemMode = true
+	s.message = "Mode problème — édition de la position"
+	s.mu.Unlock()
+	s.broadcastState()
+}
+
+func (s *Server) handleProblemExit(fen, turn string, castleWK, castleWQ, castleBK, castleBQ bool) {
+	s.moveMu.Lock()
+	defer s.moveMu.Unlock()
+
+	pos, err := position.ParseFEN(fen)
+	if err != nil {
+		s.mu.Lock()
+		s.message = "Position invalide : " + err.Error()
+		s.mu.Unlock()
+		s.broadcastState()
+		return
+	}
+
+	if turn == "b" {
+		pos.SetTurn(position.BLACK)
+	} else {
+		pos.SetTurn(position.WHITE)
+	}
+
+	var castleW, castleB uint8
+	if castleWK {
+		castleW |= position.CanCastleKingSide
+	}
+	if castleWQ {
+		castleW |= position.CanCastleQueenSide
+	}
+	if castleBK {
+		castleB |= position.CanCastleKingSide
+	}
+	if castleBQ {
+		castleB |= position.CanCastleQueenSide
+	}
+	pos.SetCastle(position.WHITE, castleW)
+	pos.SetCastle(position.BLACK, castleB)
+	pos.ResetEnPassantFlag()
+	pos.Hash = position.DefaultZT.HashPosition(pos)
+
+	s.g.SetPosition(pos)
+
+	s.mu.Lock()
+	s.problemMode = false
+	s.displayPos = pos
+	s.historyStr = ""
+	s.whiteTime = 0
+	s.blackTime = 0
+	s.turnStart = time.Now()
+	s.gameOver = false
+	s.message = "Position éditée — analyse en cours…"
+	s.mu.Unlock()
+
+	s.g.AnalysisAsync(s.ctx, analysisDepth)
+	s.broadcastState()
+}
+
 // ── Game Over Detection ───────────────────────────────────────────────────────
 
 // called while s.mu is held; s.g.History is stable because moveMu is held by the caller.
@@ -352,19 +435,24 @@ func (s *Server) checkGameOver() (bool, string) {
 // ── State Building & Broadcast ────────────────────────────────────────────────
 
 type StateMsg struct {
-	Type       string  `json:"type"`
-	Fen        string  `json:"fen"`  // piece-placement FEN, used by chessboard.js
-	Turn       string  `json:"turn"`
-	Score      int     `json:"score"`
-	History    string  `json:"history"`
-	Depth      int     `json:"depth"`
-	Best       string  `json:"best"`
-	TableStats string  `json:"tableStats"`
-	WhiteTime  float64 `json:"whiteTime"`
-	BlackTime  float64 `json:"blackTime"`
-	GameOver   bool    `json:"gameOver"`
-	Message    string  `json:"message"`
-	Version    string  `json:"version"`
+	Type        string  `json:"type"`
+	Fen         string  `json:"fen"` // piece-placement FEN, used by chessboard.js
+	Turn        string  `json:"turn"`
+	Score       int     `json:"score"`
+	History     string  `json:"history"`
+	Depth       int     `json:"depth"`
+	Best        string  `json:"best"`
+	TableStats  string  `json:"tableStats"`
+	WhiteTime   float64 `json:"whiteTime"`
+	BlackTime   float64 `json:"blackTime"`
+	GameOver    bool    `json:"gameOver"`
+	Message     string  `json:"message"`
+	Version     string  `json:"version"`
+	ProblemMode bool    `json:"problemMode"`
+	CastleWK    bool    `json:"castleWK"`
+	CastleWQ    bool    `json:"castleWQ"`
+	CastleBK    bool    `json:"castleBK"`
+	CastleBQ    bool    `json:"castleBQ"`
 }
 
 func (s *Server) buildState() []byte {
@@ -377,6 +465,7 @@ func (s *Server) buildState() []byte {
 	gameOver := s.gameOver
 	message := s.message
 	historyStr := s.historyStr
+	problemMode := s.problemMode
 	s.mu.Unlock()
 
 	if !gameOver {
@@ -400,19 +489,24 @@ func (s *Server) buildState() []byte {
 	}
 
 	data, _ := json.Marshal(StateMsg{
-		Type: "state",
-		Fen:  positionToFEN(pos),
-		Turn: turn,
-		Score:      int(entry.Score),
-		History:    historyStr,
-		Depth:      int(entry.Depth),
-		Best:       best,
-		TableStats: g.Z.Stats(),
-		WhiteTime:  wt.Seconds(),
-		BlackTime:  bt.Seconds(),
-		GameOver:   gameOver,
-		Message:    message,
-		Version:    mychess.VERSION,
+		Type:        "state",
+		Fen:         positionToFEN(pos),
+		Turn:        turn,
+		Score:       int(entry.Score),
+		History:     historyStr,
+		Depth:       int(entry.Depth),
+		Best:        best,
+		TableStats:  g.Z.Stats(),
+		WhiteTime:   wt.Seconds(),
+		BlackTime:   bt.Seconds(),
+		GameOver:    gameOver,
+		Message:     message,
+		Version:     mychess.VERSION,
+		ProblemMode: problemMode,
+		CastleWK:    pos.CastleBits(position.WHITE)&position.CanCastleKingSide != 0,
+		CastleWQ:    pos.CastleBits(position.WHITE)&position.CanCastleQueenSide != 0,
+		CastleBK:    pos.CastleBits(position.BLACK)&position.CanCastleKingSide != 0,
+		CastleBQ:    pos.CastleBits(position.BLACK)&position.CanCastleQueenSide != 0,
 	})
 	return data
 }

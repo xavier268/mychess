@@ -36,6 +36,10 @@ type Game struct {
 	// chaque profondeur complète, et sert de source fiable pour AutoPlay même
 	// quand Z a écrasé l'entrée racine (table saturée).
 	LastRootEntry ZEntry
+
+	// AgeBase est incrémenté à chaque SetPosition (mode problème) pour que les
+	// nouvelles entrées Z soient considérées comme plus récentes que les anciennes.
+	AgeBase uint16
 }
 
 func NewGame() *Game {
@@ -155,6 +159,25 @@ func (g *Game) Play(m position.Move) {
 	var enrichedMove position.Move
 	g.Position, enrichedMove = g.Position.DoMove(m)
 	g.History = append(g.History, enrichedMove)
+}
+
+// SetPosition remplace la position courante par pos (typiquement après l'édition en
+// mode problème). L'analyse en cours est stoppée, l'historique est réinitialisé,
+// AgeBase est incrémenté pour invalider les entrées Z obsolètes, et les stats de la
+// table de transposition sont remises à zéro (le cellCount est préservé).
+// L'analyse n'est PAS relancée — c'est à l'appelant de le faire.
+func (g *Game) SetPosition(pos position.Position) {
+	if g.cancelAnalysis != nil {
+		g.cancelAnalysis()
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.Position = pos
+	g.History = make([]position.Move, 0, 100)
+	g.LastRootEntry = ZEntry{}
+	g.AgeBase++
+	g.Z.ResetStats()
 }
 
 // AutoPlay joue le meilleur coup connu pour la position courante, d'après la table Z.
