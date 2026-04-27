@@ -258,3 +258,5 @@ v0.4.1  █████████ 822  ← coût du correctif EP (plus de posi
 ```
 
 Les choix de conception reflètent un arbitrage explicite : la v0.4.0 sacrifie ~70 % de vitesse brute pour garantir la légalité des coups dès leur génération et améliorer l'ordre d'exploration ; la v0.4.1 accepte un surcoût supplémentaire pour corriger une règle du jeu. La piste d'optimisation naturelle est de rendre le filtrage légal plus économique (tables d'épinglage, détection de coups *absolument légaux* sans Do/Undo complet).
+
+*Les versions v0.5.0 et v0.5.1 n'introduisent aucun changement algorithmique dans le moteur de recherche ; les benchmarks restent identiques à v0.4.1 et ne figurent pas dans ce tableau.*
