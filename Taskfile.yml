@@ -36,7 +36,7 @@ tasks:
 
   build:
     desc: build both text client and http/server interfaces
-    deps: [client, server]
+    deps: [client, server, gencache]
 
   client:
     desc: build executables for terminal clients (windows or linux)
