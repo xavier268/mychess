@@ -1,6 +1,6 @@
 # mychess
 
-Moteur d'échecs écrit en Go, avec une interface TUI basée sur BubbleTea.
+Moteur d'échecs écrit en Go, avec une interface TUI basée sur BubbleTea et une interface HTML dans un navigateur (firefox recommandé).
 
 📈 [Historique des performances par version](history.md)
 
