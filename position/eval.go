@@ -12,63 +12,40 @@ var (
 	DRAW Score = 0       // Partie nulle (pat, répétition, etc.).
 )
 
-// MaterialValue calcule l'avantage matériel du joueur courant.
+// materialValue calcule l'avantage matériel du joueur courant.
 //
-// Barème (en points, 1 pion = 10) :
-//   - Pion   : 10
-//   - Fou    : 30
-//   - Cavalier : 30
-//   - Tour   : 50
-//   - Dame   : 90
+// Barème (en points, 1 pion = 100) :
+//   - Pion   : 100
+//   - Fou    : 300
+//   - Cavalier : 300
+//   - Tour   : 500
+//   - Dame   : 900
 //
 // Représentation interne : une dame est stockée à la fois dans rookOcc ET bishopOcc.
-// Son score est donc : 50 (tour) + 30 (fou) + 10 (bonus dame) = 90.
-func (p Position) MaterialValue() Score {
+// Son score est donc : 500 (tour) + 300 (fou) + 100 (bonus dame) = 900.
+func (p Position) materialValue() Score {
 
 	t := p.status.GetTurn()
 
-	s := 10*bits.OnesCount(uint(p.pawnOcc&p.colOcc[t])) - 10*bits.OnesCount(uint(p.pawnOcc&p.colOcc[1^t]))
-	s += 30*bits.OnesCount(uint(p.bishopOcc&p.colOcc[t])) - 30*bits.OnesCount(uint(p.bishopOcc&p.colOcc[1^t]))
-	s += 30*bits.OnesCount(uint(p.knightOcc&p.colOcc[t])) - 30*bits.OnesCount(uint(p.knightOcc&p.colOcc[1^t]))
-	// Les tours pures (rookOcc sans bishopOcc) valent 50.
-	// Les dames (rookOcc ∩ bishopOcc) sont comptées ici à 50, puis à 30 (fou), puis +10 ci-dessous → total 90.
-	s += 50*bits.OnesCount(uint(p.rookOcc&p.colOcc[t])) - 50*bits.OnesCount(uint(p.rookOcc&p.colOcc[1^t]))
-	// Bonus dame : 10 points supplémentaires pour les pièces dans rookOcc ∩ bishopOcc (les dames).
-	s += 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[t])) - 10*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[1^t]))
+	s := 100*bits.OnesCount(uint(p.pawnOcc&p.colOcc[t])) - 100*bits.OnesCount(uint(p.pawnOcc&p.colOcc[1^t]))
+	s += 300*bits.OnesCount(uint(p.bishopOcc&p.colOcc[t])) - 300*bits.OnesCount(uint(p.bishopOcc&p.colOcc[1^t]))
+	s += 300*bits.OnesCount(uint(p.knightOcc&p.colOcc[t])) - 300*bits.OnesCount(uint(p.knightOcc&p.colOcc[1^t]))
+	// Les tours pures (rookOcc sans bishopOcc) valent 500.
+	// Les dames (rookOcc ∩ bishopOcc) sont comptées ici à 500, puis à 300 (fou), puis +100 ci-dessous → total 900.
+	s += 500*bits.OnesCount(uint(p.rookOcc&p.colOcc[t])) - 500*bits.OnesCount(uint(p.rookOcc&p.colOcc[1^t]))
+	// Bonus dame : 100 points supplémentaires pour les pièces dans rookOcc ∩ bishopOcc (les dames).
+	s += 100*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[t])) - 100*bits.OnesCount(uint(p.rookOcc&p.bishopOcc&p.colOcc[1^t]))
 	return Score(s)
 }
 
-// IsCheck retourne true si le joueur courant est en échec.
-func (p Position) IsCheck() bool {
-	t := p.status.GetTurn()
-	return p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t)
-}
-
-// Turn retourne le camp qui doit jouer : WHITE (0) ou BLACK (1).
-func (p Position) Turn() uint8 {
-	return p.status.GetTurn()
-}
-
-// CastleBits retourne le masque des droits de roque pour le camp donné.
-// Testez avec position.CanCastleKingSide et position.CanCastleQueenSide.
-func (p Position) CastleBits(side uint8) uint8 {
-	return p.status.GetCastleBits(side)
-}
-
-// KingPosition retourne la case du roi du camp `side` (WHITE ou BLACK).
-func (p Position) KingPosition(side uint8) Square {
-	return p.status.GetKingPosition(side)
-}
-
 // Value évalue la position de manière statique (appelée à profondeur 0 dans l'alpha/beta).
-// Retourne le score du point de vue du joueur courant : positif = bon pour lui.
+// Retourne le score en "centipions" du point de vue du joueur courant : positif = bon pour lui.
 //
 // Composantes du score :
 //   - WON  si le joueur courant peut capturer le roi adverse (position illégale de l'adversaire)
-//   - Malus de 10 si le joueur courant est en échec
 //   - +1 par droit de roque disponible (mobilité future)
-//   - +1 par case du centre occupée (d4, d5, e4, e5)
 //   - Avantage matériel (voir MaterialValue)
+//   - PST score (valeurs de cases spécifiques, pondérées par la phase de la partie)
 func (p Position) Value() Score {
 
 	t := p.status.GetTurn()
@@ -80,19 +57,19 @@ func (p Position) Value() Score {
 		return WON
 	}
 
-	// Malus si le joueur courant est sous échec : la position est dangereuse.
-	if p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t) {
-		s += Score(-10)
-	}
+	// // Malus si le joueur courant est sous échec : la position est dangereuse.
+	// if p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t) {
+	// 	s += Score(-10)
+	// }
 
 	// Bonus pour chaque droit de roque encore disponible (avantage positionnel futur).
 	s += Score(bits.OnesCount(uint(p.status.KingStatus[t]&CanCastle)) - bits.OnesCount(uint(p.status.KingStatus[1^t]&CanCastle)))
 
-	// Bonus pour chaque case centrale occupée (d4, d5, e4, e5).
-	s += Score(bits.OnesCount(uint(p.colOcc[t]&Center())) - bits.OnesCount(uint(p.colOcc[1^t]&Center())))
+	// Bonus/malus PST
+	s += p.pstValue()
 
 	// Avantage matériel.
-	s += p.MaterialValue()
+	s += p.materialValue()
 
 	return s
 }

@@ -140,6 +140,28 @@ func (st Status) String() string {
 	return buf.String()
 }
 
+// IsCheck retourne true si le joueur courant est en échec.
+func (p Position) IsCheck() bool {
+	t := p.status.GetTurn()
+	return p.IsSquareAttacked(p.status.GetKingPosition(t), 1^t)
+}
+
+// Turn retourne le camp qui doit jouer : WHITE (0) ou BLACK (1).
+func (p Position) Turn() uint8 {
+	return p.status.GetTurn()
+}
+
+// CastleBits retourne le masque des droits de roque pour le camp donné.
+// Testez avec position.CanCastleKingSide et position.CanCastleQueenSide.
+func (p Position) CastleBits(side uint8) uint8 {
+	return p.status.GetCastleBits(side)
+}
+
+// KingPosition retourne la case du roi du camp `side` (WHITE ou BLACK).
+func (p Position) KingPosition(side uint8) Square {
+	return p.status.GetKingPosition(side)
+}
+
 // Extract the en passant flag of the opposite player.
 // Phantom pawns (in pawnOcc but not in colOcc) at rank 7 are BLACK's EP signals (black double-pushed).
 // Phantom pawns at rank 0 are WHITE's EP signals (white double-pushed).

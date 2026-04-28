@@ -142,11 +142,12 @@ func (p Position) GetMoveList() []Move {
 	candidates := make([]Move, 0, 32)
 	for fromSq := range p.colOcc[turn].AllSetSquares {
 		bb := p.GetMovesBB(fromSq)
+		// spc := p.PieceAt(fromSq) // the piece that is moving ...
 		for toSq := range bb.AllSetSquares {
 			// Score captures by piece value
-			sc := uint8(p.rookOcc.Get(toSq)*4 +
-				p.bishopOcc.Get(toSq)*3 +
-				p.knightOcc.Get(toSq)*3 +
+			sc := 10 * uint8(p.rookOcc.Get(toSq)*4+
+				p.bishopOcc.Get(toSq)*3+
+				p.knightOcc.Get(toSq)*3+
 				p.pawnOcc.Get(toSq)*2)
 
 			// Pawn reaching the last rank → expand into four promotion moves
@@ -156,7 +157,7 @@ func (p Position) GetMoveList() []Move {
 						From:      fromSq,
 						To:        toSq,
 						Promotion: piece,
-						Score:     sc + 2*uint8(piece),
+						Score:     sc + 10*uint8(piece),
 					})
 				}
 			} else {
